@@ -83,7 +83,9 @@ function parseCalendarSpacing(value: unknown): CalendarSpacing | null {
   return null;
 }
 
-function sharedFields(o: Record<string, unknown>): Omit<Settings, 'version' | 'calendarGrid' | 'calendarSpacing'> | null {
+function sharedFields(
+  o: Record<string, unknown>,
+): Omit<Settings, 'version' | 'calendarGrid' | 'calendarSpacing'> | null {
   const theme: Theme | null = o.theme === 'dark' ? 'dark' : o.theme === 'light' ? 'light' : null;
   const layout: CalendarLayout | null =
     o.layout === 'week' ? 'week' : o.layout === 'month' ? 'month' : null;
@@ -200,7 +202,10 @@ export function saveSettings(settings: Settings): void {
 
 export function applySettings(settings: Settings): void {
   document.documentElement.setAttribute('data-theme', settings.theme);
-  document.documentElement.setAttribute('data-calendar-grid', settings.calendarGrid ? 'true' : 'false');
+  document.documentElement.setAttribute(
+    'data-calendar-grid',
+    settings.calendarGrid ? 'true' : 'false',
+  );
   document.documentElement.setAttribute('data-calendar-spacing', settings.calendarSpacing);
   document.documentElement.setAttribute('data-week-start', settings.weekStart);
   saveSettings(settings);
