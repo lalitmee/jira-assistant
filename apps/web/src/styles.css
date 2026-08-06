@@ -500,15 +500,14 @@ a:hover {
   margin-right: 4px;
 }
 
-.range-bar-header .month-nav-btn {
-  min-width: 40px;
+.range-bar-header .month-nav .soft-disc-btn {
   width: 40px;
   height: 40px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
+}
+
+.range-bar-header .month-nav .soft-disc-icon {
+  width: 20px;
+  height: 20px;
 }
 
 .month-nav-icon {
@@ -620,11 +619,6 @@ a:hover {
   gap: 8px;
 }
 
-.month-nav-btn {
-  padding: 8px 12px;
-  min-width: 88px;
-}
-
 .month-nav-label {
   font-size: 15px;
   font-weight: 500;
@@ -703,10 +697,11 @@ a:hover {
 .layout-switcher {
   display: inline-flex;
   padding: 3px;
-  background: var(--bg);
-  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 70%, var(--border));
+  border: none;
   border-radius: 999px;
   gap: 2px;
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--text) 10%, transparent);
 }
 
 .layout-switcher-btn {
@@ -715,9 +710,13 @@ a:hover {
   color: var(--text-secondary);
   font-weight: 500;
   font-size: 13px;
-  padding: 6px 14px;
+  padding: 7px 16px;
   border-radius: 999px;
   cursor: pointer;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .layout-switcher-btn:hover {
@@ -726,8 +725,21 @@ a:hover {
 
 .layout-switcher-btn.active {
   background: var(--surface);
-  color: var(--text);
-  box-shadow: 0 1px 2px rgba(60, 64, 67, 0.2);
+  color: var(--blue);
+  font-weight: 600;
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--text) 12%, transparent),
+    0 4px 12px color-mix(in srgb, var(--text) 12%, transparent);
+}
+
+.layout-switcher-btn:focus {
+  outline: none;
+}
+
+.layout-switcher-btn:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--blue);
 }
 
 .week-view-wrap,
@@ -769,7 +781,7 @@ a:hover {
   gap: 10px;
 }
 
-.week-hang-btn {
+.soft-disc-btn {
   width: 36px;
   height: 36px;
   padding: 0;
@@ -794,7 +806,7 @@ a:hover {
     color 160ms ease;
 }
 
-.week-hang-btn::before {
+.soft-disc-btn::before {
   content: '';
   position: absolute;
   inset: -3px;
@@ -803,7 +815,7 @@ a:hover {
   pointer-events: none;
 }
 
-.week-hang-btn:hover:not(:disabled) {
+.soft-disc-btn:hover:not(:disabled) {
   background: var(--surface);
   color: var(--blue-hover);
   box-shadow:
@@ -812,37 +824,38 @@ a:hover {
   transform: scale(1.06);
 }
 
-.week-hang-btn:hover:not(:disabled)::before {
+.soft-disc-btn:hover:not(:disabled)::before {
   border-color: color-mix(in srgb, var(--blue) 45%, transparent);
 }
 
-.week-hang-btn:focus {
+.soft-disc-btn:focus {
   outline: none;
 }
 
-.week-hang-btn:focus-visible {
+.soft-disc-btn:focus-visible {
   box-shadow:
     0 0 0 2px var(--surface),
     0 0 0 4px var(--blue),
     0 6px 16px color-mix(in srgb, var(--text) 14%, transparent);
 }
 
-.week-hang-btn:focus-visible::before {
+.soft-disc-btn:focus-visible::before {
   display: none;
 }
 
-.week-hang-btn:disabled {
+.soft-disc-btn:disabled {
   opacity: 0.4;
   cursor: default;
   color: var(--text-secondary);
   box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 8%, transparent);
+  transform: none;
 }
 
-.week-hang-btn:disabled::before {
+.soft-disc-btn:disabled::before {
   border-color: color-mix(in srgb, var(--border) 80%, transparent);
 }
 
-.week-hang-icon {
+.soft-disc-icon {
   width: 18px;
   height: 18px;
   display: block;

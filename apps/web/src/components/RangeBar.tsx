@@ -69,12 +69,12 @@ export function RangeBar({
       <div className="month-nav">
         <button
           type="button"
-          className="btn btn-ghost month-nav-btn"
+          className="soft-disc-btn"
           onClick={goPrevMonth}
           disabled={loading}
           aria-label="Previous month"
         >
-          <svg className="month-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <svg className="soft-disc-icon" viewBox="0 0 24 24" aria-hidden="true">
             <path
               d="M15.4 4.6a1.2 1.2 0 0 1 0 1.7L10.7 11l4.7 4.7a1.2 1.2 0 1 1-1.7 1.7l-5.5-5.5a1.2 1.2 0 0 1 0-1.7l5.5-5.5a1.2 1.2 0 0 1 1.7 0z"
               fill="currentColor"
@@ -84,12 +84,12 @@ export function RangeBar({
         <span className="month-nav-label">{monthLabel}</span>
         <button
           type="button"
-          className="btn btn-ghost month-nav-btn"
+          className="soft-disc-btn"
           onClick={goNextMonth}
           disabled={loading || !canGoNextMonth(from)}
           aria-label="Next month"
         >
-          <svg className="month-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <svg className="soft-disc-icon" viewBox="0 0 24 24" aria-hidden="true">
             <path
               d="M8.6 4.6a1.2 1.2 0 0 1 1.7 0l5.5 5.5a1.2 1.2 0 0 1 0 1.7l-5.5 5.5a1.2 1.2 0 1 1-1.7-1.7l4.7-4.7-4.7-4.7a1.2 1.2 0 0 1 0-1.7z"
               fill="currentColor"
