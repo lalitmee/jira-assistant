@@ -1,5 +1,6 @@
 import type { DayBucket, WorklogEntry } from '../api';
 import { formatDuration } from '../api';
+import { hoursStatus, parseLocal } from './DayChip';
 
 type Props = {
   open: boolean;
@@ -49,10 +50,21 @@ function groupByIssue(worklogs: WorklogEntry[]): IssueGroup[] {
   return Array.from(map.values()).sort((a, b) => b.totalSeconds - a.totalSeconds);
 }
 
+function drawerStatusClass(date: string | null, bucket: DayBucket | undefined): string {
+  if (!date) return '';
+  const weekday = parseLocal(date).getDay();
+  const isWeekend = weekday === 0 || weekday === 6;
+  const status = hoursStatus(bucket?.totalSeconds ?? 0, isWeekend);
+  if (status === 'ok') return 'hours-ok';
+  if (status === 'bad') return 'hours-bad';
+  return 'hours-weekend';
+}
+
 export function DayDrawer({ open, date, bucket, siteUrl, onClose }: Props) {
   const worklogs = bucket?.worklogs ?? [];
   const total = bucket?.totalSeconds ?? 0;
   const groups = groupByIssue(worklogs);
+  const statusClass = drawerStatusClass(date, bucket);
   const label = date
     ? new Date(`${date}T12:00:00`).toLocaleDateString(undefined, {
         weekday: 'long',
@@ -70,7 +82,7 @@ export function DayDrawer({ open, date, bucket, siteUrl, onClose }: Props) {
         aria-hidden={!open}
       />
       <aside
-        className={`drawer${open ? ' open' : ''}`}
+        className={`drawer${open ? ' open' : ''}${statusClass ? ` ${statusClass}` : ''}`}
         aria-hidden={!open}
         aria-label="Day details"
       >

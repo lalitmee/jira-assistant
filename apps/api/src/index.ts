@@ -11,7 +11,7 @@ import {
   setOAuthState,
   setSession,
 } from './session.js';
-import { buildAuthorizeUrl, buildSessionAfterOAuth, fetchWorklogsForRange } from './jira.js';
+import { buildAuthorizeUrl, buildSessionAfterOAuth, fetchMyself, fetchWorklogsForRange, pickAvatarUrl } from './jira.js';
 import { assertDateRange } from './dates.js';
 
 const app = new Hono();
@@ -65,13 +65,31 @@ app.post('/api/logout', (c) => {
 });
 
 app.get('/api/me', async (c) => {
-  const session = await getSession(c);
+  let session = await getSession(c);
   if (!session) return c.json({ error: 'Unauthorized' }, 401);
+
+  // Backfill avatar for sessions created before avatarUrl existed.
+  if (!session.avatarUrl) {
+    try {
+      const { myself, session: next } = await fetchMyself(session);
+      session = {
+        ...next,
+        accountId: myself.accountId || session.accountId,
+        displayName: myself.displayName || session.displayName,
+        avatarUrl: pickAvatarUrl(myself) || session.avatarUrl,
+      };
+      await setSession(c, session);
+    } catch {
+      // Keep session as-is; UI falls back to initials.
+    }
+  }
+
   return c.json({
     accountId: session.accountId,
     displayName: session.displayName,
     siteName: session.siteName,
     siteUrl: session.siteUrl,
+    avatarUrl: session.avatarUrl ?? null,
   });
 });
 

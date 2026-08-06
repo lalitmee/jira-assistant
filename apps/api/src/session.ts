@@ -14,6 +14,8 @@ export type SessionData = {
   siteName: string;
   accountId: string;
   displayName: string;
+  /** Jira profile avatar URL (usually 48x48). */
+  avatarUrl?: string;
 };
 
 const COOKIE = 'ja_sid';

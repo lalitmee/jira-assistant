@@ -5,13 +5,25 @@ import {
   fetchWorklogs,
   formatDuration,
   logout,
+  monthRange,
+  toIsoDate,
   type Me,
   type WorklogsResponse,
 } from './api';
 import { Header } from './components/Header';
 import { RangeBar } from './components/RangeBar';
-import { DayStrip } from './components/DayStrip';
+import { LayoutSwitcher } from './components/LayoutSwitcher';
+import { MonthView, WeekView } from './components/CalendarViews';
 import { DayDrawer } from './components/DayDrawer';
+import {
+  LAYOUT_STORAGE_KEY,
+  monthStartForWeek,
+  parseLocal,
+  readStoredLayout,
+  weekContaining,
+  weekWindowForFocus,
+  type CalendarLayout,
+} from './components/DayChip';
 
 export function App() {
   const initial = useMemo(() => defaultRange(), []);
@@ -24,6 +36,8 @@ export function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [layout, setLayout] = useState<CalendarLayout>(() => readStoredLayout());
+  const [weekFocus, setWeekFocus] = useState(() => weekContaining(toIsoDate(new Date())).from);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -65,7 +79,14 @@ export function App() {
 
   useEffect(() => {
     if (!me) return;
-    void load(from, to);
+    if (layout === 'week') {
+      const focus = weekContaining(toIsoDate(new Date())).from;
+      setWeekFocus(focus);
+      const win = weekWindowForFocus(focus);
+      void load(win.from, win.to);
+    } else {
+      void load(from, to);
+    }
     // Initial load when session becomes available
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me, load]);
@@ -81,6 +102,40 @@ export function App() {
   const openDay = (iso: string) => {
     setSelected(iso);
     setDrawerOpen(true);
+  };
+
+  const changeLayout = (next: CalendarLayout) => {
+    if (next === layout) return;
+    setLayout(next);
+    try {
+      localStorage.setItem(LAYOUT_STORAGE_KEY, next);
+    } catch {
+      // ignore
+    }
+
+    if (next === 'week') {
+      const today = toIsoDate(new Date());
+      // Prefer today when it’s in the viewed month; else first week of that month.
+      const focus =
+        today >= from && today <= to
+          ? weekContaining(today).from
+          : weekContaining(from).from;
+      setWeekFocus(focus);
+      const win = weekWindowForFocus(focus);
+      // Keep focus clamped inside the loaded window (avoids oldest-week flash at index 0).
+      const clamped =
+        win.weekStarts.includes(focus)
+          ? focus
+          : win.weekStarts[win.weekStarts.length - 1] ?? focus;
+      setWeekFocus(clamped);
+      void load(win.from, win.to);
+      return;
+    }
+
+    const monthStart = monthStartForWeek(weekFocus);
+    const d = parseLocal(monthStart);
+    const range = monthRange(d.getFullYear(), d.getMonth());
+    void load(range.from, range.to);
   };
 
   if (!authChecked) {
@@ -116,8 +171,8 @@ export function App() {
     );
   }
 
-  const stripFrom = data?.from ?? from;
-  const stripTo = data?.to ?? to;
+  const rangeFrom = data?.from ?? from;
+  const rangeTo = data?.to ?? to;
 
   return (
     <div className="app-shell">
@@ -125,39 +180,65 @@ export function App() {
         me={me}
         onLogout={onLogout}
         controls={
-          <RangeBar
-            from={from}
-            to={to}
-            totalSeconds={data?.totalSeconds ?? null}
-            loading={loading}
-            onApply={(f, t) => void load(f, t)}
-            formatDuration={formatDuration}
-          />
+          layout === 'month' ? (
+            <RangeBar
+              from={from}
+              to={to}
+              loading={loading}
+              onApply={(f, t) => void load(f, t)}
+            />
+          ) : null
         }
       />
       <main className="main">
         {error ? <p className="error">{error}</p> : null}
 
-        <div className="legend">
-          <span className="legend-item">
-            <i className="swatch weekend" /> Weekend (ignored)
-          </span>
-          <span className="legend-item">
-            <i className="swatch ok" /> 6h–8h
-          </span>
-          <span className="legend-item">
-            <i className="swatch bad" /> Under 6h or over 8h
-          </span>
+        <div className="main-toolbar">
+          <div className="legend">
+            <span className="legend-item">
+              <i className="swatch weekend" /> Weekend (ignored)
+            </span>
+            <span className="legend-item">
+              <i className="swatch ok" /> 6h–8h
+            </span>
+            <span className="legend-item">
+              <i className="swatch bad" /> Under 6h or over 8h
+            </span>
+            <span className="legend-item legend-total">
+              {loading ? (
+                'Loading…'
+              ) : data ? (
+                <>
+                  Total <strong>{formatDuration(data.totalSeconds)}</strong>
+                </>
+              ) : null}
+            </span>
+          </div>
+          <LayoutSwitcher layout={layout} onChange={changeLayout} />
         </div>
 
-        <DayStrip
-          from={stripFrom}
-          to={stripTo}
-          days={data?.days ?? {}}
-          selected={selected}
-          loading={loading}
-          onSelect={openDay}
-        />
+        {layout === 'month' ? (
+          <MonthView
+            monthIso={rangeFrom}
+            rangeFrom={rangeFrom}
+            rangeTo={rangeTo}
+            days={data?.days ?? {}}
+            selected={selected}
+            loading={loading}
+            onSelect={openDay}
+          />
+        ) : (
+          <WeekView
+            focusSunday={weekFocus}
+            rangeFrom={rangeFrom}
+            rangeTo={rangeTo}
+            days={data?.days ?? {}}
+            selected={selected}
+            loading={loading}
+            onSelect={openDay}
+            onFocusWeek={setWeekFocus}
+          />
+        )}
 
         {!loading && data && data.totalSeconds === 0 ? (
           <p className="empty">No worklogs in this range.</p>

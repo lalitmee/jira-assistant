@@ -3,6 +3,7 @@ export type Me = {
   displayName: string;
   siteName: string;
   siteUrl: string;
+  avatarUrl?: string | null;
 };
 
 export type WorklogEntry = {

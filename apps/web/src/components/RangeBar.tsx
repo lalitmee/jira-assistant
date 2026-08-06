@@ -13,10 +13,8 @@ import 'react-day-picker/style.css';
 type Props = {
   from: string;
   to: string;
-  totalSeconds: number | null;
   loading: boolean;
   onApply: (from: string, to: string) => void;
-  formatDuration: (s: number) => string;
 };
 
 function toRange(from: string, to: string): DateRange {
@@ -26,10 +24,8 @@ function toRange(from: string, to: string): DateRange {
 export function RangeBar({
   from,
   to,
-  totalSeconds,
   loading,
   onApply,
-  formatDuration,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<DateRange | undefined>(() => toRange(from, to));
@@ -78,7 +74,12 @@ export function RangeBar({
           disabled={loading}
           aria-label="Previous month"
         >
-          ←
+          <svg className="month-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M15.4 4.6a1.2 1.2 0 0 1 0 1.7L10.7 11l4.7 4.7a1.2 1.2 0 1 1-1.7 1.7l-5.5-5.5a1.2 1.2 0 0 1 0-1.7l5.5-5.5a1.2 1.2 0 0 1 1.7 0z"
+              fill="currentColor"
+            />
+          </svg>
         </button>
         <span className="month-nav-label">{monthLabel}</span>
         <button
@@ -88,11 +89,19 @@ export function RangeBar({
           disabled={loading || !canGoNextMonth(from)}
           aria-label="Next month"
         >
-          →
+          <svg className="month-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M8.6 4.6a1.2 1.2 0 0 1 1.7 0l5.5 5.5a1.2 1.2 0 0 1 0 1.7l-5.5 5.5a1.2 1.2 0 1 1-1.7-1.7l4.7-4.7-4.7-4.7a1.2 1.2 0 0 1 0-1.7z"
+              fill="currentColor"
+            />
+          </svg>
         </button>
       </div>
 
       <div className="range-picker-wrap">
+        <span className="range-field-label" id="range-field-label">
+          Range
+        </span>
         <button
           type="button"
           className="range-trigger"
@@ -101,9 +110,15 @@ export function RangeBar({
             setOpen((v) => !v);
           }}
           aria-expanded={open}
+          aria-labelledby="range-field-label"
         >
-          <span className="range-trigger-label">Range</span>
           <span className="range-trigger-value">{label}</span>
+          <svg className="range-trigger-chevron" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M7.4 9.4a1.2 1.2 0 0 1 1.7 0L12 12.3l2.9-2.9a1.2 1.2 0 1 1 1.7 1.7l-3.75 3.75a1.2 1.2 0 0 1-1.7 0L7.4 11.1a1.2 1.2 0 0 1 0-1.7z"
+            />
+          </svg>
         </button>
 
         {open ? (
@@ -116,7 +131,7 @@ export function RangeBar({
               max={MAX_RANGE_DAYS}
               min={1}
               defaultMonth={draft?.from ?? parseISO(from)}
-              weekStartsOn={1}
+              weekStartsOn={0}
               resetOnSelect
               className="range-daypicker"
             />
@@ -143,18 +158,6 @@ export function RangeBar({
           </div>
         ) : null}
       </div>
-
-      {totalSeconds != null ? (
-        <div className="summary">
-          {loading ? 'Loading…' : (
-            <>
-              Total <strong>{formatDuration(totalSeconds)}</strong>
-            </>
-          )}
-        </div>
-      ) : loading ? (
-        <div className="summary">Loading…</div>
-      ) : null}
 
       {open ? (
         <button

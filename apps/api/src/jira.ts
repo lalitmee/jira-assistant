@@ -23,7 +23,19 @@ type AccessibleResource = {
 type JiraMyself = {
   accountId: string;
   displayName: string;
+  avatarUrls?: {
+    '16x16'?: string;
+    '24x24'?: string;
+    '32x32'?: string;
+    '48x48'?: string;
+  };
 };
+
+export function pickAvatarUrl(myself: JiraMyself): string | undefined {
+  const urls = myself.avatarUrls;
+  if (!urls) return undefined;
+  return urls['48x48'] || urls['32x32'] || urls['24x24'] || urls['16x16'];
+}
 
 type JiraIssue = {
   id: string;
@@ -430,6 +442,7 @@ export async function buildSessionAfterOAuth(code: string): Promise<SessionData>
     ...next,
     accountId: myself.accountId,
     displayName: myself.displayName,
+    avatarUrl: pickAvatarUrl(myself),
   };
   return session;
 }
