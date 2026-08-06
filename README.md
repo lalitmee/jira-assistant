@@ -24,8 +24,8 @@ yarn install
 yarn dev
 ```
 
-- Web: http://localhost:5173  
-- API: http://localhost:8888  
+- Web: http://localhost:5173
+- API: http://localhost:8888
 
 Open the web URL → **Connect to Jira** → pick a date range → review day totals and worklog details.
 
@@ -46,8 +46,8 @@ yarn build
 yarn start:prod
 ```
 
-- App: http://localhost:8888  
-- Sessions persist in `./.data`  
+- App: http://localhost:8888
+- Sessions persist in `./.data`
 - Re-run `yarn prod` after code changes (builds automatically)
 
 Run in the background:
@@ -66,7 +66,7 @@ Build and run in the background:
 docker compose up -d --build
 ```
 
-- App: http://localhost:8888  
+- App: http://localhost:8888
 - OAuth callback stays `http://localhost:8888/auth/callback` (same as `.env.example`)
 - Sessions persist in `./.data` on your machine (mounted into the container)
 

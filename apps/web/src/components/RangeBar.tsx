@@ -58,13 +58,7 @@ function isPickerAtCurrentMonth(pickerMonth: Date, monthsShown: number, endMonth
   );
 }
 
-export function RangeBar({
-  from,
-  to,
-  loading,
-  onApply,
-  onGoToday,
-}: Props) {
+export function RangeBar({ from, to, loading, onApply, onGoToday }: Props) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<DateRange | undefined>(() => toRange(from, to));
   const [pickerMonth, setPickerMonth] = useState(() => parseISO(from));
@@ -200,12 +194,7 @@ export function RangeBar({
                 <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
                   Cancel
                 </Button>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  disabled={!canApply || loading}
-                  onClick={apply}
-                >
+                <Button variant="primary" size="sm" disabled={!canApply || loading} onClick={apply}>
                   {loading ? 'Loading…' : 'Apply'}
                 </Button>
               </div>

@@ -10,13 +10,13 @@ Replace the top-row week prev/next buttons with hanging controls beside the day-
 
 ## Decisions
 
-| Choice | Decision |
-|--------|----------|
-| Placement | **B · Fully outside** — controls in side margins, never covering day chips |
-| Style | **3 · Soft accent disc** — white floating circle + blue chevron (frosted glass tried, too subtle) |
-| Scope | **Week nav only** — month nav and other buttons unchanged |
-| Label | Stays centered above the carousel; no buttons in that row |
-| Swipe / keyboard | Keep existing threshold swipe and Left/Right keys |
+| Choice           | Decision                                                                                          |
+| ---------------- | ------------------------------------------------------------------------------------------------- |
+| Placement        | **B · Fully outside** — controls in side margins, never covering day chips                        |
+| Style            | **3 · Soft accent disc** — white floating circle + blue chevron (frosted glass tried, too subtle) |
+| Scope            | **Week nav only** — month nav and other buttons unchanged                                         |
+| Label            | Stays centered above the carousel; no buttons in that row                                         |
+| Swipe / keyboard | Keep existing threshold swipe and Left/Right keys                                                 |
 
 ## Behavior
 

@@ -102,9 +102,7 @@ export function monthRange(year: number, monthIndex: number): { from: string; to
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const toDate =
-    year === today.getFullYear() && monthIndex === today.getMonth() && end > today
-      ? today
-      : end;
+    year === today.getFullYear() && monthIndex === today.getMonth() && end > today ? today : end;
   return { from: toIsoDate(start), to: toIsoDate(toDate) };
 }
 

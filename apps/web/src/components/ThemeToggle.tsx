@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { applyTheme, readStoredTheme, subscribeTheme, type Theme } from '../theme';
+import { useSettings } from '../SettingsContext';
+import { type Theme } from '../theme';
 
 function SunIcon() {
   return (
@@ -16,10 +16,7 @@ function SunIcon() {
 function MoonIcon() {
   return (
     <svg className="theme-toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M21 14.3A9.05 9.05 0 0 1 9.7 3 9.2 9.2 0 1 0 21 14.3z"
-      />
+      <path fill="currentColor" d="M21 14.3A9.05 9.05 0 0 1 9.7 3 9.2 9.2 0 1 0 21 14.3z" />
     </svg>
   );
 }
@@ -30,14 +27,12 @@ type Props = {
 };
 
 export function ThemeToggle({ variant = 'icon' }: Props) {
-  const [theme, setTheme] = useState<Theme>(() => readStoredTheme());
-
-  useEffect(() => subscribeTheme(setTheme), []);
+  const { settings, updateSettings } = useSettings();
+  const theme = settings.theme;
 
   const toggle = () => {
     const next: Theme = theme === 'light' ? 'dark' : 'light';
-    applyTheme(next);
-    setTheme(next);
+    updateSettings({ theme: next });
   };
 
   const nextLabel = theme === 'light' ? 'Dark' : 'Light';

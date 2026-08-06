@@ -246,10 +246,14 @@ async function mapPool<T, R>(
   return results;
 }
 
-export async function fetchMyself(session: SessionData): Promise<{ myself: JiraMyself; session: SessionData }> {
+export async function fetchMyself(
+  session: SessionData,
+): Promise<{ myself: JiraMyself; session: SessionData }> {
   const { res, session: next } = await jiraFetch(session, '/rest/api/3/myself');
   if (!res.ok) {
-    throw Object.assign(new Error('Failed to load Jira profile'), { status: res.status === 401 ? 401 : 502 });
+    throw Object.assign(new Error('Failed to load Jira profile'), {
+      status: res.status === 401 ? 401 : 502,
+    });
   }
   const myself = (await res.json()) as JiraMyself;
   return { myself, session: next };
@@ -347,10 +351,7 @@ async function searchIssuesClassic(
   return { issues, session: current };
 }
 
-async function fetchIssueWorklogsAll(
-  gate: SessionGate,
-  issueKey: string,
-): Promise<JiraWorklog[]> {
+async function fetchIssueWorklogsAll(gate: SessionGate, issueKey: string): Promise<JiraWorklog[]> {
   const all: JiraWorklog[] = [];
   let startAt = 0;
 
@@ -360,9 +361,12 @@ async function fetchIssueWorklogsAll(
     );
     if (!res.ok) {
       const text = await res.text();
-      throw Object.assign(new Error(`Worklog fetch failed for ${issueKey}: ${res.status} ${text}`), {
-        status: 502,
-      });
+      throw Object.assign(
+        new Error(`Worklog fetch failed for ${issueKey}: ${res.status} ${text}`),
+        {
+          status: 502,
+        },
+      );
     }
     const data = (await res.json()) as {
       worklogs: JiraWorklog[];
@@ -391,11 +395,7 @@ function readDevEstHours(issue: JiraIssue): number | null {
   return raw;
 }
 
-function toEntries(
-  issue: JiraIssue,
-  worklogs: JiraWorklog[],
-  accountId: string,
-): WorklogEntry[] {
+function toEntries(issue: JiraIssue, worklogs: JiraWorklog[], accountId: string): WorklogEntry[] {
   const devEstHours = readDevEstHours(issue);
   const entries: WorklogEntry[] = [];
   for (const wl of worklogs) {

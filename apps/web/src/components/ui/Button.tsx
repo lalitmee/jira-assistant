@@ -36,14 +36,7 @@ function sizeClass(variant: ButtonVariant, size: ButtonSize): string {
 
 /** Shared button for pills (primary/ghost/secondary) and circular icon nav controls. */
 export function Button(props: ButtonProps) {
-  const {
-    variant = 'primary',
-    size = 'md',
-    className,
-    children,
-    as = 'button',
-    ...rest
-  } = props;
+  const { variant = 'primary', size = 'md', className, children, as = 'button', ...rest } = props;
 
   const isIcon = variant === 'icon';
   const cls = joinClass(

@@ -6,6 +6,7 @@ import { Divider } from './ui/Divider';
 type Props = {
   me: Me;
   onLogout: () => void;
+  onOpenSettings?: () => void;
 };
 
 function initialsFor(name: string): string {
@@ -15,14 +16,10 @@ function initialsFor(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-export function UserMenu({ me, onLogout }: Props) {
+export function UserMenu({ me, onLogout, onOpenSettings }: Props) {
   const [open, setOpen] = useState(false);
-  const [imgFailed, setImgFailed] = useState(false);
+  const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setImgFailed(false);
-  }, [me.avatarUrl]);
 
   useEffect(() => {
     if (!open) return;
@@ -41,7 +38,7 @@ export function UserMenu({ me, onLogout }: Props) {
     };
   }, [open]);
 
-  const showImage = Boolean(me.avatarUrl) && !imgFailed;
+  const showImage = Boolean(me.avatarUrl) && me.avatarUrl !== failedAvatarUrl;
   const initials = initialsFor(me.displayName);
 
   return (
@@ -60,7 +57,7 @@ export function UserMenu({ me, onLogout }: Props) {
             src={me.avatarUrl!}
             alt=""
             referrerPolicy="no-referrer"
-            onError={() => setImgFailed(true)}
+            onError={() => setFailedAvatarUrl(me.avatarUrl!)}
           />
         ) : (
           <span className="user-avatar-initials" aria-hidden>
@@ -79,7 +76,7 @@ export function UserMenu({ me, onLogout }: Props) {
                   src={me.avatarUrl!}
                   alt=""
                   referrerPolicy="no-referrer"
-                  onError={() => setImgFailed(true)}
+                  onError={() => setFailedAvatarUrl(me.avatarUrl!)}
                 />
               ) : (
                 <span className="user-avatar-initials">{initials}</span>
@@ -95,6 +92,19 @@ export function UserMenu({ me, onLogout }: Props) {
             <span className="user-menu-theme-label">Theme</span>
             <ThemePillToggle />
           </div>
+          {onOpenSettings ? (
+            <button
+              type="button"
+              className="user-menu-item"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onOpenSettings();
+              }}
+            >
+              Settings
+            </button>
+          ) : null}
           <button
             type="button"
             className="user-menu-item"

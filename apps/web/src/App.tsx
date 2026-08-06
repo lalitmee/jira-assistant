@@ -16,21 +16,28 @@ import { RangeBar } from './components/RangeBar';
 import { LayoutSwitcher } from './components/LayoutSwitcher';
 import { MonthView, WeekView } from './components/CalendarViews';
 import { DayDrawer } from './components/DayDrawer';
+import { SettingsPage } from './components/SettingsPage';
 import { Button } from './components/ui/Button';
 import { Divider } from './components/ui/Divider';
 import {
-  LAYOUT_STORAGE_KEY,
   isCurrentWeek,
   monthStartForWeek,
   parseLocal,
-  readStoredLayout,
   weekContaining,
   weekWindowForFocus,
   type CalendarLayout,
 } from './components/DayChip';
+import { useSettings } from './SettingsContext';
+
+type AppView = 'calendar' | 'settings';
 
 export function App() {
+  const { settings, updateSettings } = useSettings();
+  const layout = settings.layout;
+  const { weekStart, showLegend, showFutureDays, weekSwipeEnabled } = settings;
+
   const initial = useMemo(() => defaultRange(), []);
+  const [view, setView] = useState<AppView>('calendar');
   const [me, setMe] = useState<Me | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [from, setFrom] = useState(initial.from);
@@ -39,23 +46,26 @@ export function App() {
   const [selected, setSelected] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [layout, setLayout] = useState<CalendarLayout>(() => readStoredLayout());
-  const [weekFocus, setWeekFocus] = useState(() => weekContaining(toIsoDate(new Date())).from);
-
-  useEffect(() => {
+  const [error, setError] = useState<string | null>(() => {
     const params = new URLSearchParams(window.location.search);
     const authError = params.get('authError');
     if (authError) {
-      setError(authError);
       window.history.replaceState({}, '', '/');
+      return authError;
     }
+    return null;
+  });
+  const [weekFocusAnchor, setWeekFocusAnchor] = useState(
+    () => weekContaining(toIsoDate(new Date()), weekStart).from,
+  );
+  const [prevWeekStart, setPrevWeekStart] = useState(weekStart);
 
-    fetchMe()
-      .then((profile) => setMe(profile))
-      .catch(() => setMe(null))
-      .finally(() => setAuthChecked(true));
-  }, []);
+  if (weekStart !== prevWeekStart) {
+    setPrevWeekStart(weekStart);
+    setWeekFocusAnchor((prev) => weekContaining(prev, weekStart).from);
+  }
+
+  const weekFocus = weekFocusAnchor;
 
   const load = useCallback(async (rangeFrom: string, rangeTo: string) => {
     setLoading(true);
@@ -81,39 +91,45 @@ export function App() {
     }
   }, []);
 
+  useEffect(() => {
+    fetchMe()
+      .then((profile) => {
+        setMe(profile);
+        if (!profile) return;
+        if (layout === 'week') {
+          const focus = weekContaining(toIsoDate(new Date()), weekStart).from;
+          setWeekFocusAnchor(focus);
+          const win = weekWindowForFocus(focus, weekStart);
+          void load(win.from, win.to);
+          return;
+        }
+        void load(from, to);
+      })
+      .catch(() => setMe(null))
+      .finally(() => setAuthChecked(true));
+    // Initial auth check and first worklog load only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const goToToday = useCallback(() => {
     if (layout === 'week') {
       const today = toIsoDate(new Date());
-      const focus = weekContaining(today).from;
-      setWeekFocus(focus);
-      const win = weekWindowForFocus(focus);
+      const focus = weekContaining(today, weekStart).from;
+      setWeekFocusAnchor(focus);
+      const win = weekWindowForFocus(focus, weekStart);
       void load(win.from, win.to);
       return;
     }
     const range = currentMonthRange();
     void load(range.from, range.to);
-  }, [layout, load]);
-
-  useEffect(() => {
-    if (!me) return;
-    if (layout === 'week') {
-      const focus = weekContaining(toIsoDate(new Date())).from;
-      setWeekFocus(focus);
-      const win = weekWindowForFocus(focus);
-      void load(win.from, win.to);
-    } else {
-      void load(from, to);
-    }
-    // Initial load when session becomes available
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [me, load]);
+  }, [layout, load, weekStart]);
 
   const displayTotalSeconds = useMemo(() => {
     if (!data) return 0;
     if (layout === 'month') return data.totalSeconds;
-    const { dates } = weekContaining(weekFocus);
+    const { dates } = weekContaining(weekFocus, weekStart);
     return dates.reduce((sum, iso) => sum + (data.days[iso]?.totalSeconds ?? 0), 0);
-  }, [data, layout, weekFocus]);
+  }, [data, layout, weekFocus, weekStart]);
 
   const onLogout = async () => {
     await logout();
@@ -121,6 +137,7 @@ export function App() {
     setData(null);
     setSelected(null);
     setDrawerOpen(false);
+    setView('calendar');
   };
 
   const openDay = (iso: string) => {
@@ -130,28 +147,19 @@ export function App() {
 
   const changeLayout = (next: CalendarLayout) => {
     if (next === layout) return;
-    setLayout(next);
-    try {
-      localStorage.setItem(LAYOUT_STORAGE_KEY, next);
-    } catch {
-      // ignore
-    }
+    updateSettings({ layout: next });
 
     if (next === 'week') {
       const today = toIsoDate(new Date());
-      // Prefer today when it’s in the viewed month; else first week of that month.
       const focus =
         today >= from && today <= to
-          ? weekContaining(today).from
-          : weekContaining(from).from;
-      setWeekFocus(focus);
-      const win = weekWindowForFocus(focus);
-      // Keep focus clamped inside the loaded window (avoids oldest-week flash at index 0).
-      const clamped =
-        win.weekStarts.includes(focus)
-          ? focus
-          : win.weekStarts[win.weekStarts.length - 1] ?? focus;
-      setWeekFocus(clamped);
+          ? weekContaining(today, weekStart).from
+          : weekContaining(from, weekStart).from;
+      const win = weekWindowForFocus(focus, weekStart);
+      const clamped = win.weekStarts.includes(focus)
+        ? focus
+        : (win.weekStarts[win.weekStarts.length - 1] ?? focus);
+      setWeekFocusAnchor(clamped);
       void load(win.from, win.to);
       return;
     }
@@ -182,8 +190,8 @@ export function App() {
           <div className="hero-card">
             <h2>Your worklogs, clearly</h2>
             <p>
-              Connect your Jira Cloud account to review time logged across any date range —
-              calmly, in a calendar view.
+              Connect your Jira Cloud account to review time logged across any date range — calmly,
+              in a calendar view.
             </p>
             {error ? <p className="error">{error}</p> : null}
             <Button as="a" href="/auth/jira" variant="primary">
@@ -198,11 +206,23 @@ export function App() {
   const rangeFrom = data?.from ?? from;
   const rangeTo = data?.to ?? to;
 
+  if (view === 'settings') {
+    return (
+      <div className="app-shell">
+        <Header me={me} onLogout={onLogout} onBack={() => setView('calendar')} />
+        <main className="main main-settings">
+          <SettingsPage />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell">
       <Header
         me={me}
         onLogout={onLogout}
+        onOpenSettings={() => setView('settings')}
         controls={
           layout === 'month' ? (
             <RangeBar
@@ -220,22 +240,26 @@ export function App() {
 
         <div className="main-toolbar">
           <div className="legend">
-            <span className="legend-item">
-              <i className="swatch weekend" /> Weekend
-            </span>
-            <span className="legend-item">
-              <i className="swatch future" /> Future
-            </span>
-            <span className="legend-item">
-              <i className="swatch ok" /> 6h–8h
-            </span>
-            <span className="legend-item">
-              <i className="swatch bad" /> Under 6h
-            </span>
-            <span className="legend-item">
-              <i className="swatch over" /> Over 8h
-            </span>
-            <Divider orientation="vertical" legend />
+            {showLegend ? (
+              <>
+                <span className="legend-item">
+                  <i className="swatch weekend" /> Weekend
+                </span>
+                <span className="legend-item">
+                  <i className="swatch future" /> Future
+                </span>
+                <span className="legend-item">
+                  <i className="swatch ok" /> 6h–8h
+                </span>
+                <span className="legend-item">
+                  <i className="swatch bad" /> Under 6h
+                </span>
+                <span className="legend-item">
+                  <i className="swatch over" /> Over 8h
+                </span>
+                <Divider orientation="vertical" legend />
+              </>
+            ) : null}
             <span className="legend-item legend-total">
               {loading ? (
                 'Loading…'
@@ -257,6 +281,8 @@ export function App() {
             days={data?.days ?? {}}
             selected={selected}
             loading={loading}
+            weekStart={weekStart}
+            showFutureDays={showFutureDays}
             onSelect={openDay}
           />
         ) : (
@@ -267,10 +293,13 @@ export function App() {
             days={data?.days ?? {}}
             selected={selected}
             loading={loading}
+            weekStart={weekStart}
+            showFutureDays={showFutureDays}
+            weekSwipeEnabled={weekSwipeEnabled}
             onSelect={openDay}
-            onFocusWeek={setWeekFocus}
+            onFocusWeek={setWeekFocusAnchor}
             onGoToday={() => goToToday()}
-            isOnCurrentWeek={isCurrentWeek(weekFocus)}
+            isOnCurrentWeek={isCurrentWeek(weekFocus, weekStart)}
           />
         )}
 

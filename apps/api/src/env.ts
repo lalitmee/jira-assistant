@@ -21,8 +21,4 @@ export const env = {
   webOrigin: process.env.WEB_ORIGIN?.trim() || 'http://localhost:5173',
 };
 
-export const ATLASSIAN_SCOPES = [
-  'read:jira-work',
-  'read:jira-user',
-  'offline_access',
-].join(' ');
+export const ATLASSIAN_SCOPES = ['read:jira-work', 'read:jira-user', 'offline_access'].join(' ');

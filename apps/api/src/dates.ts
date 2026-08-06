@@ -53,10 +53,9 @@ export function assertDateRange(from: string, to: string): { from: string; to: s
   }
   const spanDays = Math.floor((toDate.getTime() - fromDate.getTime()) / 86_400_000) + 1;
   if (spanDays > MAX_RANGE_DAYS) {
-    throw Object.assign(
-      new Error(`Date range cannot exceed ${MAX_RANGE_DAYS} days`),
-      { status: 400 },
-    );
+    throw Object.assign(new Error(`Date range cannot exceed ${MAX_RANGE_DAYS} days`), {
+      status: 400,
+    });
   }
   return { from, to };
 }

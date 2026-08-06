@@ -24,11 +24,11 @@ Docker container (restart: unless-stopped)
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `Dockerfile` | Multi-stage build: yarn build → Node runtime |
-| `docker-compose.yml` | Port map, env overrides, volume, restart policy |
-| `.dockerignore` | Exclude node_modules, .git, .data from build context |
+| File                 | Purpose                                              |
+| -------------------- | ---------------------------------------------------- |
+| `Dockerfile`         | Multi-stage build: yarn build → Node runtime         |
+| `docker-compose.yml` | Port map, env overrides, volume, restart policy      |
+| `.dockerignore`      | Exclude node_modules, .git, .data from build context |
 
 ## App changes
 
@@ -38,14 +38,14 @@ Docker container (restart: unless-stopped)
 
 ## Environment (Docker)
 
-| Variable | Value |
-|----------|-------|
-| `NODE_ENV` | `production` |
-| `API_PORT` | `8888` |
-| `WEB_ORIGIN` | `http://localhost:8888` |
+| Variable                 | Value                                 |
+| ------------------------ | ------------------------------------- |
+| `NODE_ENV`               | `production`                          |
+| `API_PORT`               | `8888`                                |
+| `WEB_ORIGIN`             | `http://localhost:8888`               |
 | `ATLASSIAN_REDIRECT_URI` | `http://localhost:8888/auth/callback` |
-| `DATA_DIR` | `/app/.data` |
-| `WEB_DIST` | `/app/web-dist` |
+| `DATA_DIR`               | `/app/.data`                          |
+| `WEB_DIST`               | `/app/web-dist`                       |
 
 Compose `environment` overrides `.env` values that differ from dev (e.g. `WEB_ORIGIN`).
 

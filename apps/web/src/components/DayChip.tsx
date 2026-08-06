@@ -1,14 +1,13 @@
 import type { DayBucket } from '../api';
 import { formatDuration } from '../api';
+import type { WeekStart } from '../settings';
 
 export type CalendarLayout = 'week' | 'month';
 
+/** @deprecated Migrated to ja_settings; kept for type re-exports only. */
 export const LAYOUT_STORAGE_KEY = 'ja_calendar_layout';
 
-export function hoursStatus(
-  seconds: number,
-  isWeekend: boolean,
-): 'ok' | 'under' | 'over' | 'skip' {
+export function hoursStatus(seconds: number, isWeekend: boolean): 'ok' | 'under' | 'over' | 'skip' {
   if (isWeekend) return 'skip';
   const hours = seconds / 3600;
   if (hours >= 6 && hours <= 8) return 'ok';
@@ -44,11 +43,21 @@ export function sundayIndex(d: Date): number {
   return d.getDay();
 }
 
-/** Sun–Sat week that contains `iso`. */
-export function weekContaining(iso: string): { from: string; to: string; dates: string[] } {
+/** Days since the start of the week containing `d`. */
+export function weekStartOffset(d: Date, weekStart: WeekStart): number {
+  const day = d.getDay();
+  if (weekStart === 'sunday') return day;
+  return (day + 6) % 7;
+}
+
+/** Week that contains `iso`, starting on Sunday or Monday. */
+export function weekContaining(
+  iso: string,
+  weekStart: WeekStart = 'sunday',
+): { from: string; to: string; dates: string[] } {
   const d = parseLocal(iso);
   const start = new Date(d);
-  start.setDate(start.getDate() - sundayIndex(start));
+  start.setDate(start.getDate() - weekStartOffset(d, weekStart));
   const dates: string[] = [];
   const cur = new Date(start);
   for (let i = 0; i < 7; i++) {
@@ -56,6 +65,12 @@ export function weekContaining(iso: string): { from: string; to: string; dates: 
     cur.setDate(cur.getDate() + 1);
   }
   return { from: dates[0], to: dates[6], dates };
+}
+
+export function weekdayLabels(weekStart: WeekStart): string[] {
+  const base = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  if (weekStart === 'sunday') return base;
+  return [...base.slice(1), base[0]];
 }
 
 export const WEEK_WINDOW_WEEKS = 12;
@@ -83,14 +98,17 @@ export function monthStartForWeek(weekStartIso: string): string {
  * Prefer last 12 weeks ending at the current week when `focus` is inside that range;
  * otherwise start at the focus Sunday and extend forward (capped at current week).
  */
-export function weekWindowForFocus(focusIso: string): {
+export function weekWindowForFocus(
+  focusIso: string,
+  weekStart: WeekStart = 'sunday',
+): {
   from: string;
   to: string;
   weekStarts: string[];
 } {
   const today = toIso(new Date());
-  const focusStart = weekContaining(focusIso).from;
-  const currentStart = weekContaining(today).from;
+  const focusStart = weekContaining(focusIso, weekStart).from;
+  const currentStart = weekContaining(today, weekStart).from;
   const defaultStart = shiftWeekAnchor(currentStart, -(WEEK_WINDOW_WEEKS - 1));
 
   const start =
@@ -107,18 +125,18 @@ export function weekWindowForFocus(focusIso: string): {
 
   const from = weekStarts[0];
   const lastStart = weekStarts[weekStarts.length - 1];
-  const lastSat = weekContaining(lastStart).to;
+  const lastSat = weekContaining(lastStart, weekStart).to;
   const to = lastSat > today ? today : lastSat;
   return { from, to, weekStarts };
 }
 
-export function isCurrentWeek(focusSundayIso: string): boolean {
+export function isCurrentWeek(focusStartIso: string, weekStart: WeekStart = 'sunday'): boolean {
   const today = toIso(new Date());
-  return weekContaining(today).from === focusSundayIso;
+  return weekContaining(today, weekStart).from === focusStartIso;
 }
 
-export function weekLabel(anchorIso: string): string {
-  const { from, to } = weekContaining(anchorIso);
+export function weekLabel(anchorIso: string, weekStart: WeekStart = 'sunday'): string {
+  const { from, to } = weekContaining(anchorIso, weekStart);
   const a = parseLocal(from);
   const b = parseLocal(to);
   const sameYear = a.getFullYear() === b.getFullYear();
@@ -137,6 +155,11 @@ export function weekLabel(anchorIso: string): string {
 
 export function readStoredLayout(): CalendarLayout {
   try {
+    const raw = localStorage.getItem('ja_settings');
+    if (raw) {
+      const parsed = JSON.parse(raw) as { layout?: string };
+      if (parsed.layout === 'week' || parsed.layout === 'month') return parsed.layout;
+    }
     const v = localStorage.getItem(LAYOUT_STORAGE_KEY);
     if (v === 'week' || v === 'month') return v;
   } catch {
@@ -155,6 +178,8 @@ type DayChipProps = {
   variant?: 'card' | 'cell';
   /** Hide weekday line when a shared weekday header is present. */
   hideWeekday?: boolean;
+  /** When false, future days render as empty placeholders. */
+  showFutureDays?: boolean;
   onSelect: (iso: string) => void;
 };
 
@@ -165,6 +190,7 @@ export function DayChip({
   outOfRange = false,
   variant = 'card',
   hideWeekday = false,
+  showFutureDays = true,
   onSelect,
 }: DayChipProps) {
   const d = parseLocal(iso);
@@ -172,6 +198,8 @@ export function DayChip({
   const isWeekend = weekday === 0 || weekday === 6;
   const today = toIso(new Date());
   const isFuture = iso > today;
+
+  if (!showFutureDays && isFuture) return null;
   const seconds = bucket?.totalSeconds ?? 0;
   const status = isFuture || outOfRange ? 'skip' : hoursStatus(seconds, isWeekend);
   const hasWorklogs = seconds > 0;
@@ -212,9 +240,7 @@ export function DayChip({
       }}
     >
       {hideWeekday ? null : (
-        <span className="day-chip-weekday">
-          {isToday ? 'Today' : weekdayLabel}
-        </span>
+        <span className="day-chip-weekday">{isToday ? 'Today' : weekdayLabel}</span>
       )}
       {hideWeekday && isToday ? <span className="day-chip-today-tag">Today</span> : null}
       <span className="day-chip-date">

@@ -1,0 +1,20 @@
+.page {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 8px 0 48px;
+}
+
+.heading {
+  margin: 0 0 24px;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.footer {
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+}

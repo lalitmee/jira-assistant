@@ -15,7 +15,13 @@ import {
   setOAuthState,
   setSession,
 } from './session.js';
-import { buildAuthorizeUrl, buildSessionAfterOAuth, fetchMyself, fetchWorklogsForRange, pickAvatarUrl } from './jira.js';
+import {
+  buildAuthorizeUrl,
+  buildSessionAfterOAuth,
+  fetchMyself,
+  fetchWorklogsForRange,
+  pickAvatarUrl,
+} from './jira.js';
 import { assertDateRange } from './dates.js';
 
 const app = new Hono();
@@ -39,7 +45,10 @@ app.get('/auth/jira', (c) => {
 app.get('/auth/callback', async (c) => {
   const error = c.req.query('error');
   if (error) {
-    return c.redirect(`${env.webOrigin}/?authError=${encodeURIComponent('Connection cancelled')}`, 302);
+    return c.redirect(
+      `${env.webOrigin}/?authError=${encodeURIComponent('Connection cancelled')}`,
+      302,
+    );
   }
 
   const code = c.req.query('code');
@@ -48,7 +57,10 @@ app.get('/auth/callback', async (c) => {
   clearOAuthState(c);
 
   if (!code || !state || !expected || state !== expected) {
-    return c.redirect(`${env.webOrigin}/?authError=${encodeURIComponent('Login failed — try again')}`, 302);
+    return c.redirect(
+      `${env.webOrigin}/?authError=${encodeURIComponent('Login failed — try again')}`,
+      302,
+    );
   }
 
   try {
@@ -109,10 +121,7 @@ app.get('/api/worklogs', async (c) => {
 
   const from = c.req.query('from') || '';
   const to = c.req.query('to') || '';
-  const timeZone =
-    c.req.header('x-timezone') ||
-    c.req.query('tz') ||
-    'UTC';
+  const timeZone = c.req.header('x-timezone') || c.req.query('tz') || 'UTC';
 
   try {
     assertDateRange(from, to);
@@ -144,10 +153,7 @@ function resolveWebDist(): string | null {
   const fromEnv = process.env.WEB_DIST?.trim();
   if (fromEnv && existsSync(fromEnv)) return fromEnv;
   const here = path.dirname(fileURLToPath(import.meta.url));
-  const candidates = [
-    path.resolve(here, '../web-dist'),
-    path.resolve(here, '../../web/dist'),
-  ];
+  const candidates = [path.resolve(here, '../web-dist'), path.resolve(here, '../../web/dist')];
   return candidates.find((dir) => existsSync(dir)) ?? null;
 }
 

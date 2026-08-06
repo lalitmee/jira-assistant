@@ -1,0 +1,23 @@
+.section {
+  margin: 0 0 24px;
+}
+
+.title {
+  margin: 0 0 8px;
+  padding: 0 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.card > :last-child {
+  border-bottom: none;
+}

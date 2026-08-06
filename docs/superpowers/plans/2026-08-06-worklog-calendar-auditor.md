@@ -19,32 +19,33 @@
 
 ## File map
 
-| Path | Responsibility |
-|------|----------------|
-| `package.json` | Workspaces + `dev` script |
-| `.env.example` | Documented env keys (no secrets) |
-| `apps/api/package.json` | API deps |
-| `apps/api/src/index.ts` | Server entry, CORS, routes |
-| `apps/api/src/env.ts` | Load + validate env |
-| `apps/api/src/session.ts` | Encrypt/decrypt session cookie |
-| `apps/api/src/auth.ts` | OAuth start/callback/logout |
-| `apps/api/src/jira.ts` | Jira Cloud client + worklog aggregation |
-| `apps/api/src/dates.ts` | Range validation + day grouping helpers |
-| `apps/web/package.json` | Web deps |
-| `apps/web/vite.config.ts` | Dev proxy `/api` + `/auth` → API |
-| `apps/web/src/main.tsx` | React entry |
-| `apps/web/src/App.tsx` | Auth gate + layout |
-| `apps/web/src/api.ts` | Fetch helpers |
-| `apps/web/src/components/*` | RangeBar, Calendar, DayPanel, Header |
-| `apps/web/src/styles.css` | Google-clean theme |
-| `apps/api/src/dates.test.ts` | Unit tests for validation/grouping |
-| `README.md` | Run + Atlassian setup |
+| Path                         | Responsibility                          |
+| ---------------------------- | --------------------------------------- |
+| `package.json`               | Workspaces + `dev` script               |
+| `.env.example`               | Documented env keys (no secrets)        |
+| `apps/api/package.json`      | API deps                                |
+| `apps/api/src/index.ts`      | Server entry, CORS, routes              |
+| `apps/api/src/env.ts`        | Load + validate env                     |
+| `apps/api/src/session.ts`    | Encrypt/decrypt session cookie          |
+| `apps/api/src/auth.ts`       | OAuth start/callback/logout             |
+| `apps/api/src/jira.ts`       | Jira Cloud client + worklog aggregation |
+| `apps/api/src/dates.ts`      | Range validation + day grouping helpers |
+| `apps/web/package.json`      | Web deps                                |
+| `apps/web/vite.config.ts`    | Dev proxy `/api` + `/auth` → API        |
+| `apps/web/src/main.tsx`      | React entry                             |
+| `apps/web/src/App.tsx`       | Auth gate + layout                      |
+| `apps/web/src/api.ts`        | Fetch helpers                           |
+| `apps/web/src/components/*`  | RangeBar, Calendar, DayPanel, Header    |
+| `apps/web/src/styles.css`    | Google-clean theme                      |
+| `apps/api/src/dates.test.ts` | Unit tests for validation/grouping      |
+| `README.md`                  | Run + Atlassian setup                   |
 
 ---
 
 ### Task 1: Monorepo scaffold + API env/session/OAuth shell
 
 **Files:**
+
 - Create: root `package.json`, `.env.example`, `README.md`
 - Create: `apps/api/package.json`, `apps/api/tsconfig.json`, `apps/api/src/*` env/session/auth/index
 - Create: `apps/web` Vite React TS skeleton + proxy
@@ -59,6 +60,7 @@
 ### Task 2: Worklog aggregation API
 
 **Files:**
+
 - Create/modify: `apps/api/src/jira.ts`, `apps/api/src/dates.ts`, route `GET /api/worklogs`
 - Test: `apps/api/src/dates.test.ts`
 
@@ -71,6 +73,7 @@
 ### Task 3: Google-clean calendar UI
 
 **Files:**
+
 - Create: `apps/web/src/components/Header.tsx`, `RangeBar.tsx`, `CalendarGrid.tsx`, `DayPanel.tsx`
 - Modify: `App.tsx`, `styles.css`, `api.ts`
 

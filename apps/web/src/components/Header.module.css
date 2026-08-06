@@ -1,0 +1,12 @@
+.backBtn {
+  gap: 8px;
+  padding-left: 10px;
+  padding-right: 14px;
+}
+
+.backBtn svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+  flex-shrink: 0;
+}

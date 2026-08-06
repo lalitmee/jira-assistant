@@ -26,19 +26,19 @@ Need a personal localhost web app to connect to Jira Cloud via OAuth and audit m
 
 ## Decisions
 
-| Topic | Choice |
-|-------|--------|
-| Jira | Cloud only |
-| Access | View / audit only |
-| Navigation | Date-range picker first → calendar for that span |
-| Day cell | Total hours + expandable worklog list |
-| Hosting | Personal localhost only |
-| Architecture | Vite + React UI + small Node API |
-| OAuth grant | Resource (site-restricted) |
-| Distribution | Not sharing (private app) |
-| Max range | 93 days |
-| Timezone | Browser local timezone |
-| Week start | Monday |
+| Topic        | Choice                                           |
+| ------------ | ------------------------------------------------ |
+| Jira         | Cloud only                                       |
+| Access       | View / audit only                                |
+| Navigation   | Date-range picker first → calendar for that span |
+| Day cell     | Total hours + expandable worklog list            |
+| Hosting      | Personal localhost only                          |
+| Architecture | Vite + React UI + small Node API                 |
+| OAuth grant  | Resource (site-restricted)                       |
+| Distribution | Not sharing (private app)                        |
+| Max range    | 93 days                                          |
+| Timezone     | Browser local timezone                           |
+| Week start   | Monday                                           |
 
 ## Architecture
 
@@ -105,17 +105,20 @@ WEB_ORIGIN=http://localhost:5173
   from: string;
   to: string;
   totalSeconds: number;
-  days: Record<string, {
-    totalSeconds: number;
-    worklogs: Array<{
-      id: string;
-      issueKey: string;
-      issueSummary: string;
-      started: string;
-      timeSpentSeconds: number;
-      comment: string | null;
-    }>;
-  }>;
+  days: Record<
+    string,
+    {
+      totalSeconds: number;
+      worklogs: Array<{
+        id: string;
+        issueKey: string;
+        issueSummary: string;
+        started: string;
+        timeSpentSeconds: number;
+        comment: string | null;
+      }>;
+    }
+  >;
 }
 ```
 
@@ -146,15 +149,15 @@ Also: `GET /api/me` → display name, account id, site name.
 
 ## Errors
 
-| Case | Behavior |
-|------|----------|
-| OAuth cancel / bad state | Message + stay disconnected |
-| No Cloud site | Clear error after callback |
-| Refresh fail | 401 → Connect again |
+| Case                     | Behavior                              |
+| ------------------------ | ------------------------------------- |
+| OAuth cancel / bad state | Message + stay disconnected           |
+| No Cloud site            | Clear error after callback            |
+| Refresh fail             | 401 → Connect again                   |
 | Invalid / overlong range | 400 + inline UI hint; keep prior data |
-| Jira 429 | Short backoff then user-facing retry |
-| Partial fetch failure | Fail whole request; retry |
-| Empty comment | Show “No comment” |
+| Jira 429                 | Short backoff then user-facing retry  |
+| Partial fetch failure    | Fail whole request; retry             |
+| Empty comment            | Show “No comment”                     |
 
 Never log tokens or secrets.
 

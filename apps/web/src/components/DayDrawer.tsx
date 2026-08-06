@@ -1,5 +1,7 @@
 import type { DayBucket, WorklogEntry } from '../api';
 import { estimateStatus, formatDuration } from '../api';
+import { useSettings } from '../SettingsContext';
+import { formatDrawerDate, formatDrawerTime } from '../settings';
 import { hoursStatus, parseLocal } from './DayChip';
 
 type Props = {
@@ -24,15 +26,6 @@ function issueUrl(siteUrl: string, key: string): string {
   return `${base}/browse/${key}`;
 }
 
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleTimeString(undefined, {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
 function groupByIssue(worklogs: WorklogEntry[]): IssueGroup[] {
   const map = new Map<string, IssueGroup>();
   for (const wl of worklogs) {
@@ -52,6 +45,12 @@ function groupByIssue(worklogs: WorklogEntry[]): IssueGroup[] {
     }
   }
   return Array.from(map.values()).sort((a, b) => b.totalSeconds - a.totalSeconds);
+}
+
+function chronologicalEntries(worklogs: WorklogEntry[]): WorklogEntry[] {
+  return [...worklogs].sort(
+    (a, b) => new Date(a.started).getTime() - new Date(b.started).getTime(),
+  );
 }
 
 function drawerStatusClass(date: string | null, bucket: DayBucket | undefined): string {
@@ -80,18 +79,15 @@ function formatLoggedVsEst(group: IssueGroup): { logged: string; est: string } {
 }
 
 export function DayDrawer({ open, date, bucket, siteUrl, onClose }: Props) {
+  const { settings } = useSettings();
   const worklogs = bucket?.worklogs ?? [];
   const total = bucket?.totalSeconds ?? 0;
   const groups = groupByIssue(worklogs);
+  const flatEntries = chronologicalEntries(worklogs);
   const statusClass = drawerStatusClass(date, bucket);
-  const label = date
-    ? new Date(`${date}T12:00:00`).toLocaleDateString(undefined, {
-        weekday: 'long',
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      })
-    : '';
+  const label = date ? formatDrawerDate(date, settings.dateFormat) : '';
+
+  const formatTime = (iso: string) => formatDrawerTime(iso, settings.timeFormat);
 
   return (
     <>
@@ -142,48 +138,84 @@ export function DayDrawer({ open, date, bucket, siteUrl, onClose }: Props) {
             <p className="drawer-empty">Select a day to review worklogs.</p>
           ) : worklogs.length === 0 ? (
             <p className="drawer-empty">No worklogs this day.</p>
+          ) : settings.drawerGroupBy === 'chronological' ? (
+            <ul className="entry-list entry-list-flat">
+              {flatEntries.map((wl) => (
+                <li className="entry-row entry-row-flat" key={wl.id}>
+                  <div className="entry-time-col">
+                    <span className="entry-duration">{formatDuration(wl.timeSpentSeconds)}</span>
+                    <span className="entry-clock">{formatTime(wl.started)}</span>
+                  </div>
+                  <div className="entry-flat-meta">
+                    <a
+                      className="issue-key"
+                      href={issueUrl(siteUrl, wl.issueKey)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {wl.issueKey}
+                    </a>
+                    <p className="entry-comment">
+                      {wl.comment || <span className="entry-comment-empty">No comment</span>}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
           ) : (
             <div className="issue-list">
               {groups.map((group) => {
                 const { logged, est } = formatLoggedVsEst(group);
-                const hasEst = group.devEstHours != null && group.devEstHours > 0;
+                const hasEst =
+                  settings.drawerShowEstimates &&
+                  group.devEstHours != null &&
+                  group.devEstHours > 0;
                 return (
-                <article className={`issue-card ${estimateClass(group)}`} key={group.issueKey}>
-                  <div className="issue-card-top">
-                    <header className="issue-card-header">
-                      <a
-                        className="issue-key"
-                        href={issueUrl(siteUrl, group.issueKey)}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {group.issueKey}
-                      </a>
-                      <span className="issue-total" title={hasEst ? 'Logged / Dev Est' : 'Logged / no Dev Est'}>
-                        <span className="issue-total-logged">{logged}</span>
-                        <span className="issue-total-sep" aria-hidden>
-                          /
-                        </span>
-                        <span className="issue-total-est">{est}</span>
-                      </span>
-                    </header>
-                    <h4 className="issue-summary">{group.issueSummary}</h4>
-                  </div>
+                  <article className={`issue-card ${estimateClass(group)}`} key={group.issueKey}>
+                    <div className="issue-card-top">
+                      <header className="issue-card-header">
+                        <a
+                          className="issue-key"
+                          href={issueUrl(siteUrl, group.issueKey)}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {group.issueKey}
+                        </a>
+                        {settings.drawerShowEstimates ? (
+                          <span
+                            className="issue-total"
+                            title={hasEst ? 'Logged / Dev Est' : 'Logged / no Dev Est'}
+                          >
+                            <span className="issue-total-logged">{logged}</span>
+                            <span className="issue-total-sep" aria-hidden>
+                              /
+                            </span>
+                            <span className="issue-total-est">{est}</span>
+                          </span>
+                        ) : (
+                          <span className="issue-total">{logged}</span>
+                        )}
+                      </header>
+                      <h4 className="issue-summary">{group.issueSummary}</h4>
+                    </div>
 
-                  <ul className="entry-list">
-                    {group.worklogs.map((wl) => (
-                      <li className="entry-row" key={wl.id}>
-                        <div className="entry-time-col">
-                          <span className="entry-duration">{formatDuration(wl.timeSpentSeconds)}</span>
-                          <span className="entry-clock">{formatTime(wl.started)}</span>
-                        </div>
-                        <p className="entry-comment">
-                          {wl.comment || <span className="entry-comment-empty">No comment</span>}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                </article>
+                    <ul className="entry-list">
+                      {group.worklogs.map((wl) => (
+                        <li className="entry-row" key={wl.id}>
+                          <div className="entry-time-col">
+                            <span className="entry-duration">
+                              {formatDuration(wl.timeSpentSeconds)}
+                            </span>
+                            <span className="entry-clock">{formatTime(wl.started)}</span>
+                          </div>
+                          <p className="entry-comment">
+                            {wl.comment || <span className="entry-comment-empty">No comment</span>}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  </article>
                 );
               })}
             </div>

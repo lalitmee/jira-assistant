@@ -9,27 +9,27 @@ Make it easy to return to the current period after browsing history, and add min
 
 ## Decisions
 
-| Topic | Choice |
-|-------|--------|
+| Topic              | Choice                                                      |
+| ------------------ | ----------------------------------------------------------- |
 | Week mode controls | Today shortcut only; swipe/arrows remain primary navigation |
-| Month presets | This month, Last month (inside range popover) |
-| Today placement | Month: header next to month nav; Week: beside week label |
-| Today when current | Button shown but disabled |
+| Month presets      | This month, Last month (inside range popover)               |
+| Today placement    | Month: header next to month nav; Week: beside week label    |
+| Today when current | Button shown but disabled                                   |
 
 ## Behavior
 
 ### Today
 
-| Mode | Action |
-|------|--------|
-| Month | Load current calendar month (`monthRange` for today’s year/month), capped at today |
-| Week | Focus Sun–Sat week containing today; reload 12-week window via `weekWindowForFocus` |
+| Mode  | Action                                                                              |
+| ----- | ----------------------------------------------------------------------------------- |
+| Month | Load current calendar month (`monthRange` for today’s year/month), capped at today  |
+| Week  | Focus Sun–Sat week containing today; reload 12-week window via `weekWindowForFocus` |
 
 ### Presets (month popover only)
 
-| Preset | Range |
-|--------|-------|
-| This month | Same as Today |
+| Preset     | Range                        |
+| ---------- | ---------------------------- |
+| This month | Same as Today                |
 | Last month | Full previous calendar month |
 
 Presets apply immediately and close the popover.

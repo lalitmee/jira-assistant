@@ -1,35 +1,23 @@
 import type { CalendarLayout } from './DayChip';
+import { SegmentedControl } from './ui/SegmentedControl';
 
 type Props = {
   layout: CalendarLayout;
   onChange: (layout: CalendarLayout) => void;
 };
 
-const OPTIONS: Array<{ id: CalendarLayout; label: string }> = [
-  { id: 'week', label: 'Week' },
-  { id: 'month', label: 'Month' },
+const OPTIONS = [
+  { value: 'week' as CalendarLayout, label: 'Week' },
+  { value: 'month' as CalendarLayout, label: 'Month' },
 ];
 
 export function LayoutSwitcher({ layout, onChange }: Props) {
   return (
-    <div
-      className="layout-switcher"
-      role="group"
+    <SegmentedControl
+      value={layout}
+      options={OPTIONS}
       aria-label="Calendar layout"
-      data-active={layout}
-    >
-      <span className="layout-switcher-thumb" aria-hidden="true" />
-      {OPTIONS.map((opt) => (
-        <button
-          key={opt.id}
-          type="button"
-          className={`layout-switcher-btn${layout === opt.id ? ' active' : ''}`}
-          aria-pressed={layout === opt.id}
-          onClick={() => onChange(opt.id)}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
+      onChange={onChange}
+    />
   );
 }

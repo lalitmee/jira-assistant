@@ -24,12 +24,7 @@ export function DayStrip({ from, to, days, selected, loading, onSelect }: Props)
       <div className="day-strip" role="list" aria-label="Days in selected range">
         {dates.map((iso) => (
           <div key={iso} role="listitem">
-            <DayChip
-              iso={iso}
-              bucket={days[iso]}
-              selected={selected === iso}
-              onSelect={onSelect}
-            />
+            <DayChip iso={iso} bucket={days[iso]} selected={selected === iso} onSelect={onSelect} />
           </div>
         ))}
       </div>
