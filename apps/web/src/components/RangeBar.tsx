@@ -11,6 +11,10 @@ import {
   spanDays,
   toIsoDate,
 } from '../api';
+import { RangeTrigger } from './RangeTrigger';
+import { Button } from './ui/Button';
+import { Divider } from './ui/Divider';
+import { ChevronLeft, ChevronRight } from './ui/icons';
 import 'react-day-picker/style.css';
 
 type Props = {
@@ -25,6 +29,35 @@ function toRange(from: string, to: string): DateRange {
   return { from: parseISO(from), to: parseISO(to) };
 }
 
+const PICKER_MONTHS_SHOWN = 2;
+
+/** True when the picker view already centers on the current month (incl. Jul+Aug at end). */
+function isPickerAtCurrentMonth(pickerMonth: Date, monthsShown: number, endMonth: Date): boolean {
+  const now = new Date();
+  const curY = now.getFullYear();
+  const curM = now.getMonth();
+
+  const startY = pickerMonth.getFullYear();
+  const startM = pickerMonth.getMonth();
+
+  let includesCurrent = false;
+  for (let i = 0; i < monthsShown; i++) {
+    const d = new Date(startY, startM + i, 1);
+    if (d.getFullYear() === curY && d.getMonth() === curM) {
+      includesCurrent = true;
+      break;
+    }
+  }
+  if (!includesCurrent) return false;
+  if (startY === curY && startM === curM) return true;
+
+  const lastVisible = new Date(startY, startM + monthsShown - 1, 1);
+  return (
+    lastVisible.getFullYear() === endMonth.getFullYear() &&
+    lastVisible.getMonth() === endMonth.getMonth()
+  );
+}
+
 export function RangeBar({
   from,
   to,
@@ -34,6 +67,10 @@ export function RangeBar({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<DateRange | undefined>(() => toRange(from, to));
+  const [pickerMonth, setPickerMonth] = useState(() => parseISO(from));
+
+  const today = useMemo(() => parseISO(toIsoDate(new Date())), []);
+  const disableFutureDays = useMemo(() => ({ after: today }), [today]);
 
   const label = useMemo(() => {
     if (from === to) return format(parseISO(from), 'd MMM yyyy');
@@ -60,11 +97,23 @@ export function RangeBar({
 
   const applyPreset = (preset: 'this-month' | 'last-month') => {
     const range = preset === 'this-month' ? currentMonthRange() : lastMonthRange();
+    if (preset === 'this-month') {
+      const today = new Date();
+      setPickerMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+    } else {
+      setPickerMonth(parseISO(range.from));
+    }
     onApply(range.from, range.to);
     setOpen(false);
   };
 
   const onCurrentMonth = isCurrentMonth(from);
+  const pickerOnCurrentMonth = isPickerAtCurrentMonth(pickerMonth, PICKER_MONTHS_SHOWN, today);
+
+  const goPickerToday = () => {
+    const today = new Date();
+    setPickerMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+  };
 
   const goPrevMonth = () => {
     const next = shiftMonthRange(from, -1);
@@ -83,57 +132,64 @@ export function RangeBar({
         <span className="range-field-label" id="range-field-label">
           Range
         </span>
-        <button
-          type="button"
-          className="range-trigger"
+        <RangeTrigger
+          label={label}
+          open={open}
+          labelledBy="range-field-label"
+          compact
           onClick={() => {
             setDraft(toRange(from, to));
+            setPickerMonth(parseISO(from));
             setOpen((v) => !v);
           }}
-          aria-expanded={open}
-          aria-labelledby="range-field-label"
-        >
-          <span className="range-trigger-value">{label}</span>
-          <svg className="range-trigger-chevron" viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              fill="currentColor"
-              d="M7.4 9.4a1.2 1.2 0 0 1 1.7 0L12 12.3l2.9-2.9a1.2 1.2 0 1 1 1.7 1.7l-3.75 3.75a1.2 1.2 0 0 1-1.7 0L7.4 11.1a1.2 1.2 0 0 1 0-1.7z"
-            />
-          </svg>
-        </button>
+        />
 
         {open ? (
           <div className="range-popover" role="dialog" aria-label="Choose date range">
             <div className="range-presets">
-              <button
-                type="button"
-                className="range-preset-chip"
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={loading || pickerOnCurrentMonth}
+                onClick={goPickerToday}
+              >
+                Today
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 disabled={loading}
                 onClick={() => applyPreset('this-month')}
               >
                 This month
-              </button>
-              <button
-                type="button"
-                className="range-preset-chip"
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 disabled={loading}
                 onClick={() => applyPreset('last-month')}
               >
                 Last month
-              </button>
+              </Button>
             </div>
             <DayPicker
               mode="range"
+              animate
               selected={draft}
               onSelect={setDraft}
-              numberOfMonths={2}
+              month={pickerMonth}
+              onMonthChange={setPickerMonth}
+              numberOfMonths={PICKER_MONTHS_SHOWN}
               max={MAX_RANGE_DAYS}
               min={1}
-              defaultMonth={draft?.from ?? parseISO(from)}
+              disabled={disableFutureDays}
+              endMonth={today}
               weekStartsOn={0}
               resetOnSelect
+              excludeDisabled
               className="range-daypicker"
             />
+            <Divider orientation="horizontal" />
             <div className="range-popover-footer">
               <span className="hint">
                 {canApply
@@ -141,64 +197,57 @@ export function RangeBar({
                   : `Pick a start and end day (max ${MAX_RANGE_DAYS} days). Same day = single day.`}
               </span>
               <div className="range-popover-actions">
-                <button type="button" className="btn btn-ghost" onClick={() => setOpen(false)}>
+                <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
                   Cancel
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
                   disabled={!canApply || loading}
                   onClick={apply}
                 >
                   {loading ? 'Loading…' : 'Apply'}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
         ) : null}
       </div>
 
+      <Divider orientation="vertical" />
+
       <div className="month-nav">
-        <button
-          type="button"
-          className="soft-disc-btn"
+        <Button
+          variant="icon"
+          size="md"
           onClick={goPrevMonth}
           disabled={loading}
           aria-label="Previous month"
         >
-          <svg className="soft-disc-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M15.4 4.6a1.2 1.2 0 0 1 0 1.7L10.7 11l4.7 4.7a1.2 1.2 0 1 1-1.7 1.7l-5.5-5.5a1.2 1.2 0 0 1 0-1.7l5.5-5.5a1.2 1.2 0 0 1 1.7 0z"
-              fill="currentColor"
-            />
-          </svg>
-        </button>
+          <ChevronLeft />
+        </Button>
         <span className="month-nav-label">{monthLabel}</span>
-        <button
-          type="button"
-          className="soft-disc-btn"
+        <Button
+          variant="icon"
+          size="md"
           onClick={goNextMonth}
           disabled={loading || !canGoNextMonth(from)}
           aria-label="Next month"
         >
-          <svg className="soft-disc-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M8.6 4.6a1.2 1.2 0 0 1 1.7 0l5.5 5.5a1.2 1.2 0 0 1 0 1.7l-5.5 5.5a1.2 1.2 0 1 1-1.7-1.7l4.7-4.7-4.7-4.7a1.2 1.2 0 0 1 0-1.7z"
-              fill="currentColor"
-            />
-          </svg>
-        </button>
+          <ChevronRight />
+        </Button>
       </div>
 
-      <button
-        type="button"
-        className="nav-today-btn"
-        onClick={onGoToday}
+      <Divider orientation="vertical" />
+
+      <Button
+        variant="secondary"
         disabled={loading || onCurrentMonth}
         aria-label="Go to today"
+        onClick={onGoToday}
       >
         Today
-      </button>
+      </Button>
 
       {open ? (
         <button

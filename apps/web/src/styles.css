@@ -246,12 +246,6 @@ a:hover {
   text-overflow: ellipsis;
 }
 
-.user-menu-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 0 4px 4px;
-}
-
 .user-menu-item {
   width: 100%;
   border: none;
@@ -417,43 +411,6 @@ a:hover {
   }
 }
 
-.btn {
-  border: none;
-  border-radius: var(--pill-radius);
-  padding: 10px 24px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background 0.15s ease, box-shadow 0.15s ease;
-}
-
-.btn-primary {
-  background: var(--blue);
-  color: #fff;
-}
-
-.btn-primary:hover {
-  background: var(--blue-hover);
-  box-shadow: var(--shadow);
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--blue);
-  border: 1px solid var(--border);
-  border-radius: var(--pill-radius);
-  padding: 8px 16px;
-}
-
-.btn-ghost:hover {
-  background: var(--blue-soft);
-}
-
 .main {
   width: 100%;
   margin: 0;
@@ -510,23 +467,11 @@ a:hover {
   padding: 0;
   width: 100%;
   justify-content: center;
-  gap: 10px 20px;
+  gap: 16px;
 }
 
 .range-bar-header .range-picker-wrap {
-  padding-right: 20px;
-  border-right: 1px solid var(--border);
-  margin-right: 4px;
-}
-
-.range-bar-header .month-nav .soft-disc-btn {
-  width: 40px;
-  height: 40px;
-}
-
-.range-bar-header .month-nav .soft-disc-icon {
-  width: 20px;
-  height: 20px;
+  margin: 0;
 }
 
 .range-bar-header .month-nav-label {
@@ -538,18 +483,6 @@ a:hover {
   text-align: center;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-}
-
-.range-bar-header .range-trigger {
-  min-width: 0;
-  height: 40px;
-  padding: 0 12px;
-  box-sizing: border-box;
-}
-
-.range-bar-header .range-trigger-value {
-  font-size: 13px;
-  line-height: 1.2;
 }
 
 .range-bar-header .summary {
@@ -573,40 +506,6 @@ a:hover {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   flex-shrink: 0;
-}
-
-.range-trigger {
-  display: inline-flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  border-radius: var(--pill-radius);
-  padding: 8px 12px;
-  cursor: pointer;
-  min-width: 0;
-  height: 40px;
-  text-align: left;
-}
-
-.range-trigger:hover {
-  border-color: var(--blue);
-  background: var(--blue-soft);
-}
-
-.range-trigger-value {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text);
-  white-space: nowrap;
-}
-
-.range-trigger-chevron {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  color: var(--text-secondary);
 }
 
 .range-backdrop {
@@ -659,8 +558,7 @@ a:hover {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
+  padding-top: 0;
 }
 
 .range-presets {
@@ -668,54 +566,6 @@ a:hover {
   flex-wrap: wrap;
   gap: 8px;
   padding-bottom: 4px;
-}
-
-.range-preset-chip {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  border-radius: var(--pill-radius);
-  padding: 6px 12px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.range-preset-chip:hover:not(:disabled) {
-  border-color: var(--blue);
-  background: var(--blue-soft);
-  color: var(--blue);
-}
-
-.range-preset-chip:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.nav-today-btn {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  border-radius: var(--pill-radius);
-  padding: 0 12px;
-  height: 40px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.nav-today-btn:hover:not(:disabled) {
-  border-color: var(--blue);
-  background: var(--blue-soft);
-  color: var(--blue);
-}
-
-.nav-today-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
 }
 
 .range-popover-actions {
@@ -876,7 +726,7 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 16px;
   margin-bottom: 12px;
 }
 
@@ -893,73 +743,6 @@ a:hover {
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
-}
-
-.soft-disc-btn {
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border-radius: 999px;
-  border: none;
-  background: var(--surface);
-  color: var(--blue);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  cursor: pointer;
-  position: relative;
-  box-sizing: border-box;
-  /* Accent ring via shadow so it does not expand layout (avoids header jump). */
-  box-shadow:
-    0 0 0 1.5px color-mix(in srgb, var(--blue) 28%, transparent),
-    0 1px 2px color-mix(in srgb, var(--text) 12%, transparent),
-    0 6px 16px color-mix(in srgb, var(--text) 14%, transparent);
-  transition:
-    background 160ms ease,
-    box-shadow 160ms ease,
-    opacity 160ms ease,
-    transform 160ms ease,
-    color 160ms ease;
-}
-
-.soft-disc-btn:hover:not(:disabled) {
-  background: var(--surface);
-  color: var(--blue-hover);
-  box-shadow:
-    0 0 0 1.5px color-mix(in srgb, var(--blue) 45%, transparent),
-    0 2px 4px color-mix(in srgb, var(--text) 12%, transparent),
-    0 10px 24px color-mix(in srgb, var(--text) 18%, transparent);
-  transform: scale(1.06);
-}
-
-.soft-disc-btn:focus {
-  outline: none;
-}
-
-.soft-disc-btn:focus-visible {
-  box-shadow:
-    0 0 0 2px var(--surface),
-    0 0 0 4px var(--blue),
-    0 6px 16px color-mix(in srgb, var(--text) 14%, transparent);
-}
-
-.soft-disc-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-  color: var(--text-secondary);
-  box-shadow:
-    0 0 0 1.5px color-mix(in srgb, var(--border) 80%, transparent),
-    0 1px 2px color-mix(in srgb, var(--text) 8%, transparent);
-  transform: none;
-}
-
-.soft-disc-icon {
-  width: 18px;
-  height: 18px;
-  display: block;
-  position: relative;
-  z-index: 1;
 }
 
 .week-carousel {
@@ -1087,7 +870,8 @@ a:hover {
 .legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  align-items: center;
+  gap: 20px;
   font-size: 13px;
   color: var(--text-secondary);
 }
@@ -1095,13 +879,13 @@ a:hover {
 .legend-item {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
 .legend-total {
-  margin-left: 4px;
-  padding-left: 14px;
-  border-left: 1px solid var(--border);
+  margin-left: 0;
+  padding-left: 0;
+  border-left: none;
   color: var(--text);
   font-size: 13px;
 }
@@ -1123,6 +907,12 @@ a:hover {
   background: var(--weekend);
   border-color: var(--weekend-border);
   opacity: 0.7;
+}
+
+.swatch.future {
+  background: var(--future-bg);
+  border-color: var(--future-border);
+  border-style: dashed;
 }
 
 .swatch.ok {
@@ -1792,6 +1582,56 @@ a:hover {
 .range-daypicker.rdp-root,
 .range-popover .rdp-root {
   width: max-content;
+  --rdp-nav_button-width: 36px;
+  --rdp-nav_button-height: 36px;
+  --rdp-nav_button-disabled-opacity: 0.45;
+}
+
+.range-popover .rdp-button_previous,
+.range-popover .rdp-button_next {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--pill-radius);
+  color: var(--blue);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.range-popover .rdp-button_previous:hover:not(:disabled):not([aria-disabled='true']),
+.range-popover .rdp-button_next:hover:not(:disabled):not([aria-disabled='true']) {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.range-popover .rdp-button_previous:focus-visible,
+.range-popover .rdp-button_next:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--blue);
+}
+
+.range-popover .rdp-button_previous:disabled,
+.range-popover .rdp-button_previous[aria-disabled='true'],
+.range-popover .rdp-button_next:disabled,
+.range-popover .rdp-button_next[aria-disabled='true'] {
+  cursor: not-allowed;
+  color: var(--text-secondary);
+  border-color: var(--border);
+  background: var(--surface);
+}
+
+.range-popover .rdp-chevron {
+  fill: currentColor;
+  width: 18px;
+  height: 18px;
+}
+
+.range-popover .rdp-nav {
+  gap: 8px;
 }
 
 .range-popover .rdp-months {

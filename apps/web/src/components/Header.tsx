@@ -15,7 +15,7 @@ export function Header({ me, onLogout, controls }: Props) {
       <div className="brand">
         <img
           className="brand-logo"
-          src="/apple-touch-icon.png"
+          src="/worklog-auditor.png"
           alt=""
           width={28}
           height={28}

@@ -1,0 +1,33 @@
+.trigger {
+  composes: base secondary md from './ui/Button.module.css';
+  min-width: 0;
+  justify-content: space-between;
+  text-align: left;
+  font-weight: 500;
+  padding: 0 12px;
+}
+
+.value {
+  font-size: 13px;
+  line-height: 1.2;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chevron {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.headerTrigger {
+  composes: trigger;
+  height: 40px;
+}
+
+.headerValue {
+  composes: value;
+  font-size: 13px;
+}

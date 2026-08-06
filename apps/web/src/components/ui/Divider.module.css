@@ -1,0 +1,27 @@
+.root {
+  flex-shrink: 0;
+  background: var(--border);
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.vertical {
+  width: 1px;
+  align-self: center;
+  height: 28px;
+}
+
+.horizontal {
+  height: 1px;
+  width: 100%;
+}
+
+.inset {
+  margin: 0 4px 4px;
+}
+
+.legend {
+  align-self: center;
+  height: 20px;
+}

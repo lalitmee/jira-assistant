@@ -12,6 +12,9 @@ import {
   type TransitionEvent,
 } from 'react';
 import type { DayBucket } from '../api';
+import { Button } from './ui/Button';
+import { Divider } from './ui/Divider';
+import { ChevronLeft, ChevronRight } from './ui/icons';
 import {
   DayChip,
   sundayIndex,
@@ -319,32 +322,27 @@ export function WeekView({
         <span className="week-nav-label" aria-live="polite">
           {weekLabel(labelSunday)}
         </span>
-        <button
-          type="button"
-          className="nav-today-btn"
-          onClick={onGoToday}
+        <Divider orientation="vertical" />
+        <Button
+          variant="secondary"
           disabled={loading || isOnCurrentWeek}
           aria-label="Go to today"
+          onClick={onGoToday}
         >
           Today
-        </button>
+        </Button>
       </div>
 
       <div className="week-stage">
-        <button
-          type="button"
-          className="soft-disc-btn"
+        <Button
+          variant="icon"
+          size="sm"
           onClick={() => goToWeek(index - 1)}
           disabled={loading || !canPrev}
           aria-label="Previous week"
         >
-          <svg className="soft-disc-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M15.4 4.6a1.2 1.2 0 0 1 0 1.7L10.7 11l4.7 4.7a1.2 1.2 0 1 1-1.7 1.7l-5.5-5.5a1.2 1.2 0 0 1 0-1.7l5.5-5.5a1.2 1.2 0 0 1 1.7 0z"
-              fill="currentColor"
-            />
-          </svg>
-        </button>
+          <ChevronLeft />
+        </Button>
 
         <div
           ref={viewportRef}
@@ -393,20 +391,15 @@ export function WeekView({
           </div>
         </div>
 
-        <button
-          type="button"
-          className="soft-disc-btn"
+        <Button
+          variant="icon"
+          size="sm"
           onClick={() => goToWeek(index + 1)}
           disabled={loading || !canNext}
           aria-label="Next week"
         >
-          <svg className="soft-disc-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M8.6 4.6a1.2 1.2 0 0 1 1.7 0l5.5 5.5a1.2 1.2 0 0 1 0 1.7l-5.5 5.5a1.2 1.2 0 1 1-1.7-1.7l4.7-4.7-4.7-4.7a1.2 1.2 0 0 1 0-1.7z"
-              fill="currentColor"
-            />
-          </svg>
-        </button>
+          <ChevronRight />
+        </Button>
       </div>
     </div>
   );

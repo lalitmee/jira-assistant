@@ -16,6 +16,8 @@ import { RangeBar } from './components/RangeBar';
 import { LayoutSwitcher } from './components/LayoutSwitcher';
 import { MonthView, WeekView } from './components/CalendarViews';
 import { DayDrawer } from './components/DayDrawer';
+import { Button } from './components/ui/Button';
+import { Divider } from './components/ui/Divider';
 import {
   LAYOUT_STORAGE_KEY,
   isCurrentWeek,
@@ -184,9 +186,9 @@ export function App() {
               calmly, in a calendar view.
             </p>
             {error ? <p className="error">{error}</p> : null}
-            <a className="btn btn-primary" href="/auth/jira">
+            <Button as="a" href="/auth/jira" variant="primary">
               Connect to Jira
-            </a>
+            </Button>
           </div>
         </div>
       </div>
@@ -219,7 +221,10 @@ export function App() {
         <div className="main-toolbar">
           <div className="legend">
             <span className="legend-item">
-              <i className="swatch weekend" /> Weekend (ignored)
+              <i className="swatch weekend" /> Weekend
+            </span>
+            <span className="legend-item">
+              <i className="swatch future" /> Future
             </span>
             <span className="legend-item">
               <i className="swatch ok" /> 6h–8h
@@ -230,6 +235,7 @@ export function App() {
             <span className="legend-item">
               <i className="swatch over" /> Over 8h
             </span>
+            <Divider orientation="vertical" legend />
             <span className="legend-item legend-total">
               {loading ? (
                 'Loading…'
