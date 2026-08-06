@@ -60,7 +60,8 @@ function drawerStatusClass(date: string | null, bucket: DayBucket | undefined): 
   const isWeekend = weekday === 0 || weekday === 6;
   const status = hoursStatus(bucket?.totalSeconds ?? 0, isWeekend);
   if (status === 'ok') return 'hours-ok';
-  if (status === 'bad') return 'hours-bad';
+  if (status === 'under') return 'hours-bad';
+  if (status === 'over') return 'hours-over';
   return 'hours-weekend';
 }
 

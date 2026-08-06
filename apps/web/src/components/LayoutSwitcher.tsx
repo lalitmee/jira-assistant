@@ -12,7 +12,13 @@ const OPTIONS: Array<{ id: CalendarLayout; label: string }> = [
 
 export function LayoutSwitcher({ layout, onChange }: Props) {
   return (
-    <div className="layout-switcher" role="group" aria-label="Calendar layout">
+    <div
+      className="layout-switcher"
+      role="group"
+      aria-label="Calendar layout"
+      data-active={layout}
+    >
+      <span className="layout-switcher-thumb" aria-hidden="true" />
       {OPTIONS.map((opt) => (
         <button
           key={opt.id}

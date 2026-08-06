@@ -5,11 +5,15 @@ export type CalendarLayout = 'week' | 'month';
 
 export const LAYOUT_STORAGE_KEY = 'ja_calendar_layout';
 
-export function hoursStatus(seconds: number, isWeekend: boolean): 'ok' | 'bad' | 'skip' {
+export function hoursStatus(
+  seconds: number,
+  isWeekend: boolean,
+): 'ok' | 'under' | 'over' | 'skip' {
   if (isWeekend) return 'skip';
   const hours = seconds / 3600;
   if (hours >= 6 && hours <= 8) return 'ok';
-  return 'bad';
+  if (hours > 8) return 'over';
+  return 'under';
 }
 
 export function parseLocal(iso: string): Date {
@@ -108,14 +112,23 @@ export function weekWindowForFocus(focusIso: string): {
   return { from, to, weekStarts };
 }
 
+export function isCurrentWeek(focusSundayIso: string): boolean {
+  const today = toIso(new Date());
+  return weekContaining(today).from === focusSundayIso;
+}
+
 export function weekLabel(anchorIso: string): string {
   const { from, to } = weekContaining(anchorIso);
   const a = parseLocal(from);
   const b = parseLocal(to);
-  const sameMonth = a.getMonth() === b.getMonth();
-  const left = a.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const sameYear = a.getFullYear() === b.getFullYear();
+  const left = a.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    ...(sameYear ? {} : { year: 'numeric' }),
+  });
   const right = b.toLocaleDateString(undefined, {
-    month: sameMonth ? undefined : 'short',
+    month: 'short',
     day: 'numeric',
     year: 'numeric',
   });
@@ -157,11 +170,13 @@ export function DayChip({
   const d = parseLocal(iso);
   const weekday = d.getDay();
   const isWeekend = weekday === 0 || weekday === 6;
+  const today = toIso(new Date());
+  const isFuture = iso > today;
   const seconds = bucket?.totalSeconds ?? 0;
-  const status = hoursStatus(seconds, isWeekend);
+  const status = isFuture || outOfRange ? 'skip' : hoursStatus(seconds, isWeekend);
   const hasWorklogs = seconds > 0;
   const weekendDisabled = isWeekend && !hasWorklogs;
-  const disabled = outOfRange || weekendDisabled;
+  const disabled = outOfRange || weekendDisabled || isFuture;
 
   const weekdayLabel = d.toLocaleDateString(undefined, { weekday: 'short' });
   const dayNum = d.getDate();
@@ -173,9 +188,11 @@ export function DayChip({
     variant === 'cell' ? 'day-chip-cell' : '',
     isWeekend ? 'weekend' : '',
     disabled ? 'disabled' : '',
+    isFuture ? 'future' : '',
     outOfRange ? 'out-of-range' : '',
     status === 'ok' ? 'hours-ok' : '',
-    status === 'bad' ? 'hours-bad' : '',
+    status === 'under' ? 'hours-bad' : '',
+    status === 'over' ? 'hours-over' : '',
     selected ? 'selected' : '',
     isToday ? 'is-today' : '',
   ]

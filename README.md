@@ -29,6 +29,57 @@ yarn dev
 
 Open the web URL → **Connect to Jira** → pick a date range → review day totals and worklog details.
 
+## Production (always-on, no Docker)
+
+Single URL on port 8888 — same as the Docker setup, runs directly on your Mac:
+
+```bash
+yarn prod
+```
+
+Open **http://localhost:8888** (not 5173 — that is dev-only). Stop `yarn dev` first if it is running.
+
+Or build once, then start:
+
+```bash
+yarn build
+yarn start:prod
+```
+
+- App: http://localhost:8888  
+- Sessions persist in `./.data`  
+- Re-run `yarn prod` after code changes (builds automatically)
+
+Run in the background:
+
+```bash
+nohup yarn start:prod >> .data/prod.log 2>&1 &
+```
+
+Stop with `kill` on that process, or `pkill -f "node apps/api/dist/index.js"`.
+
+## Docker (always-on, single port)
+
+Build and run in the background:
+
+```bash
+docker compose up -d --build
+```
+
+- App: http://localhost:8888  
+- OAuth callback stays `http://localhost:8888/auth/callback` (same as `.env.example`)
+- Sessions persist in `./.data` on your machine (mounted into the container)
+
+Useful commands:
+
+```bash
+docker compose logs -f    # follow logs
+docker compose down       # stop
+docker compose up -d --build   # rebuild after code changes
+```
+
+For active development with hot reload, use `yarn dev` instead.
+
 ## Stack
 
 - `apps/web` — Vite + React

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  currentMonthRange,
   defaultRange,
   fetchMe,
   fetchWorklogs,
@@ -17,6 +18,7 @@ import { MonthView, WeekView } from './components/CalendarViews';
 import { DayDrawer } from './components/DayDrawer';
 import {
   LAYOUT_STORAGE_KEY,
+  isCurrentWeek,
   monthStartForWeek,
   parseLocal,
   readStoredLayout,
@@ -77,6 +79,19 @@ export function App() {
     }
   }, []);
 
+  const goToToday = useCallback(() => {
+    if (layout === 'week') {
+      const today = toIsoDate(new Date());
+      const focus = weekContaining(today).from;
+      setWeekFocus(focus);
+      const win = weekWindowForFocus(focus);
+      void load(win.from, win.to);
+      return;
+    }
+    const range = currentMonthRange();
+    void load(range.from, range.to);
+  }, [layout, load]);
+
   useEffect(() => {
     if (!me) return;
     if (layout === 'week') {
@@ -90,6 +105,13 @@ export function App() {
     // Initial load when session becomes available
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me, load]);
+
+  const displayTotalSeconds = useMemo(() => {
+    if (!data) return 0;
+    if (layout === 'month') return data.totalSeconds;
+    const { dates } = weekContaining(weekFocus);
+    return dates.reduce((sum, iso) => sum + (data.days[iso]?.totalSeconds ?? 0), 0);
+  }, [data, layout, weekFocus]);
 
   const onLogout = async () => {
     await logout();
@@ -162,7 +184,7 @@ export function App() {
               calmly, in a calendar view.
             </p>
             {error ? <p className="error">{error}</p> : null}
-            <a className="btn btn-primary" href="http://localhost:8888/auth/jira">
+            <a className="btn btn-primary" href="/auth/jira">
               Connect to Jira
             </a>
           </div>
@@ -186,6 +208,7 @@ export function App() {
               to={to}
               loading={loading}
               onApply={(f, t) => void load(f, t)}
+              onGoToday={() => goToToday()}
             />
           ) : null
         }
@@ -202,14 +225,17 @@ export function App() {
               <i className="swatch ok" /> 6h–8h
             </span>
             <span className="legend-item">
-              <i className="swatch bad" /> Under 6h or over 8h
+              <i className="swatch bad" /> Under 6h
+            </span>
+            <span className="legend-item">
+              <i className="swatch over" /> Over 8h
             </span>
             <span className="legend-item legend-total">
               {loading ? (
                 'Loading…'
               ) : data ? (
                 <>
-                  Total <strong>{formatDuration(data.totalSeconds)}</strong>
+                  Total <strong>{formatDuration(displayTotalSeconds)}</strong>
                 </>
               ) : null}
             </span>
@@ -237,6 +263,8 @@ export function App() {
             loading={loading}
             onSelect={openDay}
             onFocusWeek={setWeekFocus}
+            onGoToday={() => goToToday()}
+            isOnCurrentWeek={isCurrentWeek(weekFocus)}
           />
         )}
 

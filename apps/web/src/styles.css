@@ -18,7 +18,11 @@
   --weekend: #f1f3f4;
   --weekend-border: #e0e0e0;
   --weekend-text: #9aa0a6;
+  --future-bg: #ffffff;
+  --future-border: #c4c7c5;
+  --future-text: #80868b;
   --radius: 10px;
+  --pill-radius: 999px;
   --shadow: 0 1px 2px rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
   --overlay: rgba(248, 249, 250, 0.72);
   --drawer-backdrop: rgba(32, 33, 36, 0.36);
@@ -44,6 +48,9 @@
   --weekend: #2d2e30;
   --weekend-border: #3c4043;
   --weekend-text: #9aa0a6;
+  --future-bg: #202124;
+  --future-border: #5f6368;
+  --future-text: #80868b;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px 1px rgba(0, 0, 0, 0.25);
   --overlay: rgba(23, 23, 23, 0.78);
   --drawer-backdrop: rgba(0, 0, 0, 0.55);
@@ -69,6 +76,13 @@ body {
 button,
 input {
   font: inherit;
+}
+
+button:not(.day-chip):not(.day-chip-cell),
+input,
+select,
+textarea {
+  border-radius: var(--pill-radius);
 }
 
 a {
@@ -97,12 +111,17 @@ a:hover {
   position: sticky;
   top: 0;
   z-index: 30;
+  /* Keep header height stable when month RangeBar mounts/unmounts. */
+  min-height: 60px;
+  box-sizing: border-box;
 }
 
 .topbar-controls {
   display: flex;
   justify-content: center;
+  align-items: center;
   min-width: 0;
+  min-height: 40px;
 }
 
 .brand {
@@ -239,7 +258,7 @@ a:hover {
   background: transparent;
   text-align: left;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--pill-radius);
   font: inherit;
   font-size: 14px;
   font-weight: 500;
@@ -400,7 +419,7 @@ a:hover {
 
 .btn {
   border: none;
-  border-radius: 24px;
+  border-radius: var(--pill-radius);
   padding: 10px 24px;
   cursor: pointer;
   font-weight: 500;
@@ -427,7 +446,7 @@ a:hover {
   background: transparent;
   color: var(--blue);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--pill-radius);
   padding: 8px 16px;
 }
 
@@ -494,7 +513,7 @@ a:hover {
   gap: 10px 20px;
 }
 
-.range-bar-header .month-nav {
+.range-bar-header .range-picker-wrap {
   padding-right: 20px;
   border-right: 1px solid var(--border);
   margin-right: 4px;
@@ -510,25 +529,27 @@ a:hover {
   height: 20px;
 }
 
-.month-nav-icon {
-  width: 22px;
-  height: 22px;
-  display: block;
-}
-
 .range-bar-header .month-nav-label {
-  min-width: 120px;
+  min-width: 5.5rem;
+  width: 5.5rem;
   font-size: 15px;
   font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .range-bar-header .range-trigger {
   min-width: 0;
-  padding: 6px 12px;
+  height: 40px;
+  padding: 0 12px;
+  box-sizing: border-box;
 }
 
 .range-bar-header .range-trigger-value {
   font-size: 13px;
+  line-height: 1.2;
 }
 
 .range-bar-header .summary {
@@ -561,7 +582,7 @@ a:hover {
   gap: 6px;
   border: 1px solid var(--border);
   background: var(--surface);
-  border-radius: 8px;
+  border-radius: var(--pill-radius);
   padding: 8px 12px;
   cursor: pointer;
   min-width: 0;
@@ -601,6 +622,7 @@ a:hover {
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
+  right: auto;
   z-index: 7;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -611,6 +633,8 @@ a:hover {
   flex-direction: column;
   gap: 8px;
   min-width: min(680px, calc(100vw - 48px));
+  max-width: calc(100vw - 24px);
+  box-sizing: border-box;
 }
 
 .month-nav {
@@ -622,9 +646,11 @@ a:hover {
 .month-nav-label {
   font-size: 15px;
   font-weight: 500;
-  min-width: 140px;
+  min-width: 5.5rem;
   text-align: center;
   color: var(--text);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .range-popover-footer {
@@ -635,6 +661,61 @@ a:hover {
   gap: 12px;
   padding-top: 8px;
   border-top: 1px solid var(--border);
+}
+
+.range-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 4px;
+}
+
+.range-preset-chip {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: var(--pill-radius);
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.range-preset-chip:hover:not(:disabled) {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.range-preset-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.nav-today-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: var(--pill-radius);
+  padding: 0 12px;
+  height: 40px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.nav-today-btn:hover:not(:disabled) {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.nav-today-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .range-popover-actions {
@@ -676,7 +757,7 @@ a:hover {
 .error {
   color: var(--danger);
   background: var(--danger-soft);
-  border-radius: 4px;
+  border-radius: var(--pill-radius);
   padding: 12px 16px;
 }
 
@@ -695,16 +776,40 @@ a:hover {
 }
 
 .layout-switcher {
-  display: inline-flex;
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
   padding: 3px;
   background: color-mix(in srgb, var(--bg) 70%, var(--border));
   border: none;
   border-radius: 999px;
-  gap: 2px;
+  gap: 0;
   box-shadow: inset 0 1px 2px color-mix(in srgb, var(--text) 10%, transparent);
 }
 
+.layout-switcher-thumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--text) 12%, transparent),
+    0 4px 12px color-mix(in srgb, var(--text) 12%, transparent);
+  transition: transform 280ms cubic-bezier(0.32, 0.72, 0, 1);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.layout-switcher[data-active='month'] .layout-switcher-thumb {
+  transform: translateX(100%);
+}
+
 .layout-switcher-btn {
+  position: relative;
+  z-index: 1;
   border: none;
   background: transparent;
   color: var(--text-secondary);
@@ -713,10 +818,7 @@ a:hover {
   padding: 7px 16px;
   border-radius: 999px;
   cursor: pointer;
-  transition:
-    background 160ms ease,
-    color 160ms ease,
-    box-shadow 160ms ease;
+  transition: color 200ms ease;
 }
 
 .layout-switcher-btn:hover {
@@ -724,12 +826,10 @@ a:hover {
 }
 
 .layout-switcher-btn.active {
-  background: var(--surface);
+  background: transparent;
   color: var(--blue);
   font-weight: 600;
-  box-shadow:
-    0 1px 2px color-mix(in srgb, var(--text) 12%, transparent),
-    0 4px 12px color-mix(in srgb, var(--text) 12%, transparent);
+  box-shadow: none;
 }
 
 .layout-switcher-btn:focus {
@@ -740,6 +840,12 @@ a:hover {
   box-shadow:
     0 0 0 2px var(--surface),
     0 0 0 4px var(--blue);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layout-switcher-thumb {
+    transition: none;
+  }
 }
 
 .week-view-wrap,
@@ -766,12 +872,20 @@ a:hover {
   box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--blue);
 }
 
+.week-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
 .week-nav-label {
   font-size: 15px;
   font-weight: 600;
   text-align: center;
   color: var(--text);
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
 
 .week-stage {
@@ -795,7 +909,10 @@ a:hover {
   flex-shrink: 0;
   cursor: pointer;
   position: relative;
+  box-sizing: border-box;
+  /* Accent ring via shadow so it does not expand layout (avoids header jump). */
   box-shadow:
+    0 0 0 1.5px color-mix(in srgb, var(--blue) 28%, transparent),
     0 1px 2px color-mix(in srgb, var(--text) 12%, transparent),
     0 6px 16px color-mix(in srgb, var(--text) 14%, transparent);
   transition:
@@ -806,26 +923,14 @@ a:hover {
     color 160ms ease;
 }
 
-.soft-disc-btn::before {
-  content: '';
-  position: absolute;
-  inset: -3px;
-  border-radius: 999px;
-  border: 1.5px solid color-mix(in srgb, var(--blue) 28%, transparent);
-  pointer-events: none;
-}
-
 .soft-disc-btn:hover:not(:disabled) {
   background: var(--surface);
   color: var(--blue-hover);
   box-shadow:
+    0 0 0 1.5px color-mix(in srgb, var(--blue) 45%, transparent),
     0 2px 4px color-mix(in srgb, var(--text) 12%, transparent),
     0 10px 24px color-mix(in srgb, var(--text) 18%, transparent);
   transform: scale(1.06);
-}
-
-.soft-disc-btn:hover:not(:disabled)::before {
-  border-color: color-mix(in srgb, var(--blue) 45%, transparent);
 }
 
 .soft-disc-btn:focus {
@@ -839,20 +944,14 @@ a:hover {
     0 6px 16px color-mix(in srgb, var(--text) 14%, transparent);
 }
 
-.soft-disc-btn:focus-visible::before {
-  display: none;
-}
-
 .soft-disc-btn:disabled {
   opacity: 0.4;
   cursor: default;
   color: var(--text-secondary);
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 8%, transparent);
+  box-shadow:
+    0 0 0 1.5px color-mix(in srgb, var(--border) 80%, transparent),
+    0 1px 2px color-mix(in srgb, var(--text) 8%, transparent);
   transform: none;
-}
-
-.soft-disc-btn:disabled::before {
-  border-color: color-mix(in srgb, var(--border) 80%, transparent);
 }
 
 .soft-disc-icon {
@@ -888,6 +987,10 @@ a:hover {
   display: flex;
   flex-direction: row;
   will-change: transform;
+}
+
+.week-track.is-animating {
+  transition: transform var(--week-page-transition-ms, 320ms) cubic-bezier(0.33, 1, 0.68, 1);
 }
 
 .week-page {
@@ -943,9 +1046,42 @@ a:hover {
   min-height: 96px;
 }
 
-.day-chip.out-of-range {
+.day-chip.out-of-range:not(.future) {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+.day-chip.future {
+  background: var(--future-bg);
+  border-color: var(--future-border);
+  border-style: dashed;
+  color: var(--future-text);
+  opacity: 1;
+  box-shadow: none;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.day-chip.future .day-chip-weekday,
+.day-chip.future .day-chip-date,
+.day-chip.future .day-chip-hours {
+  color: var(--future-text);
+  font-weight: 400;
+}
+
+.day-chip.future.weekend,
+.day-chip-cell.future.weekend {
+  background: var(--future-bg);
+  border-color: var(--future-border);
+  opacity: 1;
+}
+
+.day-chip.future.hours-bad,
+.day-chip.future.hours-ok,
+.day-chip.future.hours-over {
+  border-color: var(--future-border);
+  box-shadow: none;
+  background: var(--future-bg);
 }
 
 .legend {
@@ -997,6 +1133,11 @@ a:hover {
 .swatch.bad {
   background: var(--danger-soft);
   border-color: var(--danger);
+}
+
+.swatch.over {
+  background: var(--warn-soft);
+  border-color: var(--warn);
 }
 
 /* Horizontal day strip */
@@ -1169,6 +1310,23 @@ a:hover {
   font-weight: 600;
 }
 
+.day-chip.hours-over {
+  border-color: var(--warn);
+  box-shadow: inset 0 0 0 1px var(--warn);
+  background: var(--warn-soft);
+}
+
+.day-chip-cell.hours-over {
+  border-color: transparent;
+  box-shadow: none;
+  background: var(--warn-soft);
+}
+
+.day-chip.hours-over .day-chip-hours {
+  color: var(--warn);
+  font-weight: 600;
+}
+
 .day-chip.selected {
   outline: 2px solid var(--blue);
   outline-offset: -2px;
@@ -1201,6 +1359,13 @@ a:hover {
   box-shadow: inset 0 0 0 1px var(--danger);
 }
 
+.day-chip.is-today.hours-over {
+  outline-color: var(--warn);
+  border-color: var(--warn);
+  background: var(--warn-soft);
+  box-shadow: inset 0 0 0 1px var(--warn);
+}
+
 .day-chip.is-today .day-chip-weekday,
 .day-chip-today-tag {
   color: var(--blue);
@@ -1215,6 +1380,11 @@ a:hover {
 .day-chip.is-today.hours-bad .day-chip-weekday,
 .day-chip.is-today.hours-bad .day-chip-today-tag {
   color: var(--danger);
+}
+
+.day-chip.is-today.hours-over .day-chip-weekday,
+.day-chip.is-today.hours-over .day-chip-today-tag {
+  color: var(--warn);
 }
 
 .day-chip-today-tag {
@@ -1248,7 +1418,7 @@ a:hover {
   background: var(--drawer-backdrop);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease;
+  transition: opacity 280ms cubic-bezier(0.32, 0.72, 0, 1);
   z-index: 40;
 }
 
@@ -1266,16 +1436,26 @@ a:hover {
   background: var(--bg);
   box-shadow: -8px 0 32px rgba(60, 64, 67, 0.2);
   transform: translateX(100%);
-  transition: transform 0.22s ease;
+  transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
   z-index: 50;
   display: flex;
   flex-direction: column;
   padding: 0;
   overflow: hidden;
+  will-change: transform;
+  pointer-events: none;
 }
 
 .drawer.open {
   transform: translateX(0);
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer-backdrop,
+  .drawer {
+    transition: none;
+  }
 }
 
 .drawer-header {
@@ -1304,6 +1484,11 @@ a:hover {
   border-bottom-color: color-mix(in srgb, var(--danger) 40%, var(--border));
 }
 
+.drawer.hours-over .drawer-header {
+  background: color-mix(in srgb, var(--warn-soft) 85%, var(--surface));
+  border-bottom-color: color-mix(in srgb, var(--warn) 40%, var(--border));
+}
+
 .drawer.hours-weekend .drawer-header {
   background: color-mix(in srgb, var(--weekend) 90%, var(--surface));
   border-bottom-color: var(--weekend-border);
@@ -1315,6 +1500,10 @@ a:hover {
 
 .drawer.hours-bad .drawer-stat-sep {
   color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+
+.drawer.hours-over .drawer-stat-sep {
+  color: color-mix(in srgb, var(--warn) 45%, var(--border));
 }
 
 .drawer.hours-weekend .drawer-stat-sep {

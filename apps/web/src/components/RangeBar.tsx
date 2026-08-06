@@ -4,6 +4,9 @@ import { format, parseISO } from 'date-fns';
 import {
   MAX_RANGE_DAYS,
   canGoNextMonth,
+  currentMonthRange,
+  isCurrentMonth,
+  lastMonthRange,
   shiftMonthRange,
   spanDays,
   toIsoDate,
@@ -15,6 +18,7 @@ type Props = {
   to: string;
   loading: boolean;
   onApply: (from: string, to: string) => void;
+  onGoToday: () => void;
 };
 
 function toRange(from: string, to: string): DateRange {
@@ -26,6 +30,7 @@ export function RangeBar({
   to,
   loading,
   onApply,
+  onGoToday,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<DateRange | undefined>(() => toRange(from, to));
@@ -35,7 +40,7 @@ export function RangeBar({
     return `${format(parseISO(from), 'd MMM yyyy')} – ${format(parseISO(to), 'd MMM yyyy')}`;
   }, [from, to]);
 
-  const monthLabel = useMemo(() => format(parseISO(from), 'MMMM yyyy'), [from]);
+  const monthLabel = useMemo(() => format(parseISO(from), 'MMM yyyy'), [from]);
 
   const draftFrom = draft?.from ? toIsoDate(draft.from) : '';
   const draftTo = draft?.to ? toIsoDate(draft.to) : draftFrom;
@@ -53,6 +58,14 @@ export function RangeBar({
     setOpen(false);
   };
 
+  const applyPreset = (preset: 'this-month' | 'last-month') => {
+    const range = preset === 'this-month' ? currentMonthRange() : lastMonthRange();
+    onApply(range.from, range.to);
+    setOpen(false);
+  };
+
+  const onCurrentMonth = isCurrentMonth(from);
+
   const goPrevMonth = () => {
     const next = shiftMonthRange(from, -1);
     onApply(next.from, next.to);
@@ -66,38 +79,6 @@ export function RangeBar({
 
   return (
     <div className="range-bar range-bar-header">
-      <div className="month-nav">
-        <button
-          type="button"
-          className="soft-disc-btn"
-          onClick={goPrevMonth}
-          disabled={loading}
-          aria-label="Previous month"
-        >
-          <svg className="soft-disc-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M15.4 4.6a1.2 1.2 0 0 1 0 1.7L10.7 11l4.7 4.7a1.2 1.2 0 1 1-1.7 1.7l-5.5-5.5a1.2 1.2 0 0 1 0-1.7l5.5-5.5a1.2 1.2 0 0 1 1.7 0z"
-              fill="currentColor"
-            />
-          </svg>
-        </button>
-        <span className="month-nav-label">{monthLabel}</span>
-        <button
-          type="button"
-          className="soft-disc-btn"
-          onClick={goNextMonth}
-          disabled={loading || !canGoNextMonth(from)}
-          aria-label="Next month"
-        >
-          <svg className="soft-disc-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M8.6 4.6a1.2 1.2 0 0 1 1.7 0l5.5 5.5a1.2 1.2 0 0 1 0 1.7l-5.5 5.5a1.2 1.2 0 1 1-1.7-1.7l4.7-4.7-4.7-4.7a1.2 1.2 0 0 1 0-1.7z"
-              fill="currentColor"
-            />
-          </svg>
-        </button>
-      </div>
-
       <div className="range-picker-wrap">
         <span className="range-field-label" id="range-field-label">
           Range
@@ -123,6 +104,24 @@ export function RangeBar({
 
         {open ? (
           <div className="range-popover" role="dialog" aria-label="Choose date range">
+            <div className="range-presets">
+              <button
+                type="button"
+                className="range-preset-chip"
+                disabled={loading}
+                onClick={() => applyPreset('this-month')}
+              >
+                This month
+              </button>
+              <button
+                type="button"
+                className="range-preset-chip"
+                disabled={loading}
+                onClick={() => applyPreset('last-month')}
+              >
+                Last month
+              </button>
+            </div>
             <DayPicker
               mode="range"
               selected={draft}
@@ -158,6 +157,48 @@ export function RangeBar({
           </div>
         ) : null}
       </div>
+
+      <div className="month-nav">
+        <button
+          type="button"
+          className="soft-disc-btn"
+          onClick={goPrevMonth}
+          disabled={loading}
+          aria-label="Previous month"
+        >
+          <svg className="soft-disc-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M15.4 4.6a1.2 1.2 0 0 1 0 1.7L10.7 11l4.7 4.7a1.2 1.2 0 1 1-1.7 1.7l-5.5-5.5a1.2 1.2 0 0 1 0-1.7l5.5-5.5a1.2 1.2 0 0 1 1.7 0z"
+              fill="currentColor"
+            />
+          </svg>
+        </button>
+        <span className="month-nav-label">{monthLabel}</span>
+        <button
+          type="button"
+          className="soft-disc-btn"
+          onClick={goNextMonth}
+          disabled={loading || !canGoNextMonth(from)}
+          aria-label="Next month"
+        >
+          <svg className="soft-disc-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M8.6 4.6a1.2 1.2 0 0 1 1.7 0l5.5 5.5a1.2 1.2 0 0 1 0 1.7l-5.5 5.5a1.2 1.2 0 1 1-1.7-1.7l4.7-4.7-4.7-4.7a1.2 1.2 0 0 1 0-1.7z"
+              fill="currentColor"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <button
+        type="button"
+        className="nav-today-btn"
+        onClick={onGoToday}
+        disabled={loading || onCurrentMonth}
+        aria-label="Go to today"
+      >
+        Today
+      </button>
 
       {open ? (
         <button

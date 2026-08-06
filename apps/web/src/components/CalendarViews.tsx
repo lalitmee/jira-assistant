@@ -9,6 +9,7 @@ import {
   type KeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
+  type TransitionEvent,
 } from 'react';
 import type { DayBucket } from '../api';
 import {
@@ -29,6 +30,8 @@ const WEEK_SWIPE_THRESHOLD = 0.4;
 const WEEK_FLING_VELOCITY_PX_MS = 0.5;
 /** Ignore tiny moves so day-chip clicks still register. */
 const WEEK_DRAG_DEADZONE_PX = 8;
+/** Page slide duration when committing via buttons or swipe release. */
+const WEEK_PAGE_TRANSITION_MS = 320;
 
 function weekStartsInRange(from: string, to: string): string[] {
   const start = weekContaining(from).from;
@@ -61,6 +64,8 @@ type WeekProps = {
   loading?: boolean;
   onSelect: (iso: string) => void;
   onFocusWeek: (sundayIso: string) => void;
+  onGoToday: () => void;
+  isOnCurrentWeek: boolean;
 };
 
 type DragState = {
@@ -82,6 +87,8 @@ export function WeekView({
   loading,
   onSelect,
   onFocusWeek,
+  onGoToday,
+  isOnCurrentWeek,
 }: WeekProps) {
   const weekStarts = useMemo(
     () => weekStartsInRange(rangeFrom, rangeTo),
@@ -286,7 +293,12 @@ export function WeekView({
   const trackStyle: CSSProperties = {
     transform: `translate3d(${-index * pageWidth + dragOffset}px, 0, 0)`,
     width: pageWidth > 0 ? pageWidth * weekStarts.length : undefined,
-    transition: animating ? 'transform 220ms ease-out' : 'none',
+    ['--week-page-transition-ms' as string]: `${WEEK_PAGE_TRANSITION_MS}ms`,
+  };
+
+  const onTrackTransitionEnd = (e: TransitionEvent<HTMLDivElement>) => {
+    if (e.propertyName !== 'transform') return;
+    setAnimating(false);
   };
 
   return (
@@ -303,8 +315,19 @@ export function WeekView({
         </div>
       ) : null}
 
-      <div className="week-nav-label" aria-live="polite">
-        {weekLabel(labelSunday)}
+      <div className="week-nav-bar">
+        <span className="week-nav-label" aria-live="polite">
+          {weekLabel(labelSunday)}
+        </span>
+        <button
+          type="button"
+          className="nav-today-btn"
+          onClick={onGoToday}
+          disabled={loading || isOnCurrentWeek}
+          aria-label="Go to today"
+        >
+          Today
+        </button>
       </div>
 
       <div className="week-stage">
@@ -334,7 +357,11 @@ export function WeekView({
           onPointerCancel={finishPointer}
           onClickCapture={onClickCapture}
         >
-          <div className="week-track" style={trackStyle}>
+          <div
+            className={`week-track${animating ? ' is-animating' : ''}`}
+            style={trackStyle}
+            onTransitionEnd={onTrackTransitionEnd}
+          >
             {weekStarts.map((sun) => {
               const { dates } = weekContaining(sun);
               return (

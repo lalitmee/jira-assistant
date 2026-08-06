@@ -1,0 +1,17 @@
+services:
+  app:
+    build: .
+    ports:
+      - '8888:8888'
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      API_PORT: '8888'
+      WEB_ORIGIN: http://localhost:8888
+      ATLASSIAN_REDIRECT_URI: http://localhost:8888/auth/callback
+      DATA_DIR: /app/.data
+      WEB_DIST: /app/web-dist
+    volumes:
+      - ./.data:/app/.data
+    restart: unless-stopped

@@ -1,7 +1,11 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { serve } from '@hono/node-server';
+import { serveStatic } from '@hono/node-server/serve-static';
 import { randomBytes } from 'node:crypto';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { env } from './env.js';
 import {
   clearOAuthState,
@@ -135,6 +139,25 @@ app.get('/api/worklogs', async (c) => {
     return c.json({ error: message }, status as 400 | 401 | 500 | 502);
   }
 });
+
+function resolveWebDist(): string | null {
+  const fromEnv = process.env.WEB_DIST?.trim();
+  if (fromEnv && existsSync(fromEnv)) return fromEnv;
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    path.resolve(here, '../web-dist'),
+    path.resolve(here, '../../web/dist'),
+  ];
+  return candidates.find((dir) => existsSync(dir)) ?? null;
+}
+
+const webDist = process.env.NODE_ENV === 'production' ? resolveWebDist() : null;
+if (webDist) {
+  const staticRoot = webDist;
+  const stripLeadingSlash = (p: string) => p.replace(/^\//, '') || 'index.html';
+  app.use('/*', serveStatic({ root: staticRoot, rewriteRequestPath: stripLeadingSlash }));
+  app.get('*', serveStatic({ path: path.join(staticRoot, 'index.html') }));
+}
 
 serve({ fetch: app.fetch, port: env.apiPort }, () => {
   console.log(`API listening on http://localhost:${env.apiPort}`);

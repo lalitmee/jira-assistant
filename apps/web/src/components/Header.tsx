@@ -23,7 +23,7 @@ export function Header({ me, onLogout, controls }: Props) {
         <h1>Worklog Auditor</h1>
       </div>
 
-      {me && controls ? <div className="topbar-controls">{controls}</div> : null}
+      {me ? <div className="topbar-controls">{controls}</div> : null}
 
       <div className="user-meta">
         {me ? <UserMenu me={me} onLogout={onLogout} /> : <ThemeToggle />}

@@ -120,6 +120,24 @@ export function canGoNextMonth(fromIso: string): boolean {
   return !(d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth());
 }
 
+export function isCurrentMonth(fromIso: string): boolean {
+  const d = new Date(`${fromIso}T00:00:00`);
+  const today = new Date();
+  return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth();
+}
+
+/** Current calendar month, capped at today. */
+export function currentMonthRange(): { from: string; to: string } {
+  const today = new Date();
+  return monthRange(today.getFullYear(), today.getMonth());
+}
+
+/** Full previous calendar month. */
+export function lastMonthRange(): { from: string; to: string } {
+  const today = new Date();
+  return monthRange(today.getFullYear(), today.getMonth() - 1);
+}
+
 export function spanDays(from: string, to: string): number {
   const a = new Date(`${from}T00:00:00`);
   const b = new Date(`${to}T00:00:00`);

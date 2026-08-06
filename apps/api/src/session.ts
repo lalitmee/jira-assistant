@@ -21,8 +21,14 @@ export type SessionData = {
 const COOKIE = 'ja_sid';
 const STATE_COOKIE = 'ja_oauth_state';
 
-const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const storeDir = path.join(rootDir, '.data', 'sessions');
+function dataRoot(): string {
+  const fromEnv = process.env.DATA_DIR?.trim();
+  if (fromEnv) return fromEnv;
+  const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+  return path.join(repoRoot, '.data');
+}
+
+const storeDir = path.join(dataRoot(), 'sessions');
 
 function ensureStore(): void {
   mkdirSync(storeDir, { recursive: true });
