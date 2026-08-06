@@ -2,7 +2,9 @@ import { ATLASSIAN_SCOPES, env } from './env.js';
 import type { SessionData } from './session.js';
 import {
   assertDateRange,
+  DEV_EST_FIELD,
   groupWorklogsByDay,
+  withIssueTotals,
   type WorklogEntry,
 } from './dates.js';
 
@@ -48,6 +50,7 @@ type JiraIssue = {
       total: number;
       worklogs: JiraWorklog[];
     };
+    customfield_10301?: number | null;
   };
 };
 
@@ -281,7 +284,7 @@ async function searchIssues(
     const body: Record<string, unknown> = {
       jql,
       maxResults: 100,
-      fields: ['summary', 'worklog'],
+      fields: ['summary', 'worklog', DEV_EST_FIELD],
     };
     if (nextPageToken) body.nextPageToken = nextPageToken;
 
@@ -323,7 +326,7 @@ async function searchIssuesClassic(
   for (;;) {
     const { res, session: next } = await jiraFetch(
       current,
-      `/rest/api/3/search?jql=${encodeURIComponent(jql)}&startAt=${startAt}&maxResults=100&fields=summary,worklog`,
+      `/rest/api/3/search?jql=${encodeURIComponent(jql)}&startAt=${startAt}&maxResults=100&fields=summary,worklog,${DEV_EST_FIELD}`,
     );
     current = next;
     if (!res.ok) {
@@ -382,11 +385,18 @@ function embeddedWorklogsComplete(issue: JiraIssue): JiraWorklog[] | null {
   return null;
 }
 
+function readDevEstHours(issue: JiraIssue): number | null {
+  const raw = issue.fields?.[DEV_EST_FIELD];
+  if (typeof raw !== 'number' || !Number.isFinite(raw) || raw <= 0) return null;
+  return raw;
+}
+
 function toEntries(
   issue: JiraIssue,
   worklogs: JiraWorklog[],
   accountId: string,
 ): WorklogEntry[] {
+  const devEstHours = readDevEstHours(issue);
   const entries: WorklogEntry[] = [];
   for (const wl of worklogs) {
     if (wl.author?.accountId && wl.author.accountId !== accountId) continue;
@@ -397,6 +407,8 @@ function toEntries(
       started: wl.started,
       timeSpentSeconds: wl.timeSpentSeconds || 0,
       comment: extractComment(wl.comment),
+      devEstHours,
+      myTotalSeconds: 0,
     });
   }
   return entries;
@@ -483,7 +495,8 @@ export async function fetchWorklogsForRange(
   });
   for (const batch of fetched) entries.push(...batch);
 
-  const grouped = groupWorklogsByDay(entries, from, to, timeZone);
+  const enriched = withIssueTotals(entries);
+  const grouped = groupWorklogsByDay(enriched, from, to, timeZone);
   console.log(
     `worklogs range ${from}..${to}: ${issues.length} issues, ${needsFetch.length} extra fetches, ${entries.length} entries, ${Date.now() - startedAt}ms`,
   );

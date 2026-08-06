@@ -1,5 +1,5 @@
 import type { DayBucket, WorklogEntry } from '../api';
-import { formatDuration } from '../api';
+import { estimateStatus, formatDuration } from '../api';
 import { hoursStatus, parseLocal } from './DayChip';
 
 type Props = {
@@ -15,6 +15,8 @@ type IssueGroup = {
   issueSummary: string;
   totalSeconds: number;
   worklogs: WorklogEntry[];
+  devEstHours: number | null;
+  myTotalSeconds: number;
 };
 
 function issueUrl(siteUrl: string, key: string): string {
@@ -44,6 +46,8 @@ function groupByIssue(worklogs: WorklogEntry[]): IssueGroup[] {
         issueSummary: wl.issueSummary,
         totalSeconds: wl.timeSpentSeconds,
         worklogs: [wl],
+        devEstHours: wl.devEstHours ?? null,
+        myTotalSeconds: wl.myTotalSeconds ?? 0,
       });
     }
   }
@@ -58,6 +62,20 @@ function drawerStatusClass(date: string | null, bucket: DayBucket | undefined): 
   if (status === 'ok') return 'hours-ok';
   if (status === 'bad') return 'hours-bad';
   return 'hours-weekend';
+}
+
+function estimateClass(group: IssueGroup): string {
+  const status = estimateStatus(group.devEstHours, group.myTotalSeconds);
+  if (status === 'exact') return 'est-exact';
+  if (status === 'over') return 'est-over';
+  if (status === 'under') return 'est-under';
+  return 'est-none';
+}
+
+function formatLoggedVsEst(group: IssueGroup): { logged: string; est: string } {
+  const logged = formatDuration(group.myTotalSeconds);
+  if (group.devEstHours == null || !(group.devEstHours > 0)) return { logged, est: '—' };
+  return { logged, est: formatDuration(Math.round(group.devEstHours * 3600)) };
 }
 
 export function DayDrawer({ open, date, bucket, siteUrl, onClose }: Props) {
@@ -125,20 +143,31 @@ export function DayDrawer({ open, date, bucket, siteUrl, onClose }: Props) {
             <p className="drawer-empty">No worklogs this day.</p>
           ) : (
             <div className="issue-list">
-              {groups.map((group) => (
-                <article className="issue-card" key={group.issueKey}>
-                  <header className="issue-card-header">
-                    <a
-                      className="issue-key"
-                      href={issueUrl(siteUrl, group.issueKey)}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {group.issueKey}
-                    </a>
-                    <span className="issue-total">{formatDuration(group.totalSeconds)}</span>
-                  </header>
-                  <h4 className="issue-summary">{group.issueSummary}</h4>
+              {groups.map((group) => {
+                const { logged, est } = formatLoggedVsEst(group);
+                const hasEst = group.devEstHours != null && group.devEstHours > 0;
+                return (
+                <article className={`issue-card ${estimateClass(group)}`} key={group.issueKey}>
+                  <div className="issue-card-top">
+                    <header className="issue-card-header">
+                      <a
+                        className="issue-key"
+                        href={issueUrl(siteUrl, group.issueKey)}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {group.issueKey}
+                      </a>
+                      <span className="issue-total" title={hasEst ? 'Logged / Dev Est' : 'Logged / no Dev Est'}>
+                        <span className="issue-total-logged">{logged}</span>
+                        <span className="issue-total-sep" aria-hidden>
+                          /
+                        </span>
+                        <span className="issue-total-est">{est}</span>
+                      </span>
+                    </header>
+                    <h4 className="issue-summary">{group.issueSummary}</h4>
+                  </div>
 
                   <ul className="entry-list">
                     {group.worklogs.map((wl) => (
@@ -154,7 +183,8 @@ export function DayDrawer({ open, date, bucket, siteUrl, onClose }: Props) {
                     ))}
                   </ul>
                 </article>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

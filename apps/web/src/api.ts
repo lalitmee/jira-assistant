@@ -13,7 +13,24 @@ export type WorklogEntry = {
   started: string;
   timeSpentSeconds: number;
   comment: string | null;
+  /** Dev Est in hours; null when missing or zero. */
+  devEstHours: number | null;
+  /** Current user's total logged seconds on this issue (all time). */
+  myTotalSeconds: number;
 };
+
+export type EstimateStatus = 'none' | 'under' | 'exact' | 'over';
+
+export function estimateStatus(
+  devEstHours: number | null | undefined,
+  myTotalSeconds: number,
+): EstimateStatus {
+  if (devEstHours == null || !(devEstHours > 0)) return 'none';
+  const estSeconds = Math.round(devEstHours * 3600);
+  if (myTotalSeconds === estSeconds) return 'exact';
+  if (myTotalSeconds > estSeconds) return 'over';
+  return 'under';
+}
 
 export type DayBucket = {
   totalSeconds: number;

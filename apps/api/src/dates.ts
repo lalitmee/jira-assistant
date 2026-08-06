@@ -1,5 +1,8 @@
 export const MAX_RANGE_DAYS = 93;
 
+/** Jira custom field: Dev Est in Hrs (float hours). */
+export const DEV_EST_FIELD = 'customfield_10301';
+
 export type WorklogEntry = {
   id: string;
   issueKey: string;
@@ -7,12 +10,29 @@ export type WorklogEntry = {
   started: string;
   timeSpentSeconds: number;
   comment: string | null;
+  /** Dev Est in hours; null when missing or zero. */
+  devEstHours: number | null;
+  /** Current user's total logged seconds on this issue (all time). */
+  myTotalSeconds: number;
 };
 
 export type DayBucket = {
   totalSeconds: number;
   worklogs: WorklogEntry[];
 };
+
+export type EstimateStatus = 'none' | 'under' | 'exact' | 'over';
+
+export function estimateStatus(
+  devEstHours: number | null | undefined,
+  myTotalSeconds: number,
+): EstimateStatus {
+  if (devEstHours == null || !(devEstHours > 0)) return 'none';
+  const estSeconds = Math.round(devEstHours * 3600);
+  if (myTotalSeconds === estSeconds) return 'exact';
+  if (myTotalSeconds > estSeconds) return 'over';
+  return 'under';
+}
 
 export function parseIsoDate(value: string): Date | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
@@ -56,6 +76,18 @@ export function localDateKey(isoInstant: string, timeZone: string): string {
   const day = parts.find((p) => p.type === 'day')?.value;
   if (!y || !m || !day) return '';
   return `${y}-${m}-${day}`;
+}
+
+/** Sum each author's issue totals onto every entry for that issue. */
+export function withIssueTotals(entries: WorklogEntry[]): WorklogEntry[] {
+  const totals = new Map<string, number>();
+  for (const entry of entries) {
+    totals.set(entry.issueKey, (totals.get(entry.issueKey) || 0) + entry.timeSpentSeconds);
+  }
+  return entries.map((entry) => ({
+    ...entry,
+    myTotalSeconds: totals.get(entry.issueKey) || 0,
+  }));
 }
 
 export function groupWorklogsByDay(
