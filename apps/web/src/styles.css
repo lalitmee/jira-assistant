@@ -13,6 +13,8 @@
   --danger-soft: #fce8e6;
   --ok: #137333;
   --ok-soft: #e6f4ea;
+  --warn: #e37400;
+  --warn-soft: #fef7e0;
   --weekend: #f1f3f4;
   --weekend-border: #e0e0e0;
   --weekend-text: #9aa0a6;
@@ -37,6 +39,8 @@
   --danger-soft: #5c1e1a;
   --ok: #81c995;
   --ok-soft: #0d652d;
+  --warn: #fdd663;
+  --warn-soft: #5c4400;
   --weekend: #2d2e30;
   --weekend-border: #3c4043;
   --weekend-text: #9aa0a6;
@@ -742,7 +746,15 @@ a:hover {
   pointer-events: none;
 }
 
-.week-label {
+.week-view-wrap:focus {
+  outline: none;
+}
+
+.week-view-wrap:focus-visible {
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--blue);
+}
+
+.week-nav-label {
   font-size: 15px;
   font-weight: 600;
   text-align: center;
@@ -750,15 +762,105 @@ a:hover {
   margin-bottom: 12px;
 }
 
+.week-stage {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.week-hang-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 999px;
+  border: none;
+  background: var(--surface);
+  color: var(--blue);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  position: relative;
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--text) 12%, transparent),
+    0 6px 16px color-mix(in srgb, var(--text) 14%, transparent);
+  transition:
+    background 160ms ease,
+    box-shadow 160ms ease,
+    opacity 160ms ease,
+    transform 160ms ease,
+    color 160ms ease;
+}
+
+.week-hang-btn::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 999px;
+  border: 1.5px solid color-mix(in srgb, var(--blue) 28%, transparent);
+  pointer-events: none;
+}
+
+.week-hang-btn:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--blue-hover);
+  box-shadow:
+    0 2px 4px color-mix(in srgb, var(--text) 12%, transparent),
+    0 10px 24px color-mix(in srgb, var(--text) 18%, transparent);
+  transform: scale(1.06);
+}
+
+.week-hang-btn:hover:not(:disabled)::before {
+  border-color: color-mix(in srgb, var(--blue) 45%, transparent);
+}
+
+.week-hang-btn:focus {
+  outline: none;
+}
+
+.week-hang-btn:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--blue),
+    0 6px 16px color-mix(in srgb, var(--text) 14%, transparent);
+}
+
+.week-hang-btn:focus-visible::before {
+  display: none;
+}
+
+.week-hang-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  color: var(--text-secondary);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 8%, transparent);
+}
+
+.week-hang-btn:disabled::before {
+  border-color: color-mix(in srgb, var(--border) 80%, transparent);
+}
+
+.week-hang-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  position: relative;
+  z-index: 1;
+}
+
 .week-carousel {
-  display: flex;
-  flex-direction: row;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-snap-type: x mandatory;
-  scroll-behavior: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
+  touch-action: pan-y;
   overscroll-behavior-x: contain;
+  cursor: grab;
+  user-select: none;
+  min-width: 0;
+}
+
+.week-carousel:active {
+  cursor: grabbing;
 }
 
 .week-view-wrap.is-placing .week-carousel {
@@ -769,23 +871,16 @@ a:hover {
   visibility: visible;
 }
 
-.week-carousel::-webkit-scrollbar {
-  height: 8px;
-}
-
-.week-carousel::-webkit-scrollbar-thumb {
-  background: var(--scrollbar);
-  border-radius: 8px;
+.week-track {
+  display: flex;
+  flex-direction: row;
+  will-change: transform;
 }
 
 .week-page {
-  flex: 0 0 100%;
-  width: 100%;
-  min-width: 100%;
-  max-width: 100%;
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
+  flex: 0 0 auto;
   box-sizing: border-box;
+  min-width: 0;
 }
 
 .week-page .card-row {
@@ -1213,31 +1308,20 @@ a:hover {
   color: var(--weekend-border);
 }
 
-.drawer.hours-ok .issue-card {
-  border-color: color-mix(in srgb, var(--ok) 42%, var(--border));
+.issue-card.est-exact .issue-card-top {
+  background: color-mix(in srgb, var(--ok-soft) 80%, var(--surface));
 }
 
-.drawer.hours-bad .issue-card {
-  border-color: color-mix(in srgb, var(--danger) 42%, var(--border));
+.issue-card.est-over .issue-card-top {
+  background: color-mix(in srgb, var(--danger-soft) 80%, var(--surface));
 }
 
-.drawer.hours-weekend .issue-card {
-  border-color: var(--weekend-border);
+.issue-card.est-under .issue-card-top {
+  background: color-mix(in srgb, var(--warn-soft) 85%, var(--surface));
 }
 
-.drawer.hours-ok .entry-list,
-.drawer.hours-ok .entry-row {
-  border-color: color-mix(in srgb, var(--ok) 32%, var(--border));
-}
-
-.drawer.hours-bad .entry-list,
-.drawer.hours-bad .entry-row {
-  border-color: color-mix(in srgb, var(--danger) 32%, var(--border));
-}
-
-.drawer.hours-weekend .entry-list,
-.drawer.hours-weekend .entry-row {
-  border-color: var(--weekend-border);
+.issue-card.est-none .issue-card-top {
+  background: var(--surface);
 }
 
 .drawer-header-text {
@@ -1328,9 +1412,15 @@ a:hover {
 .issue-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px 16px 10px;
+  border-radius: 14px;
+  padding: 0;
   box-shadow: 0 1px 2px rgba(60, 64, 67, 0.08);
+  overflow: hidden;
+}
+
+.issue-card-top {
+  padding: 14px 16px 12px;
+  background: var(--surface);
 }
 
 .issue-card-header {
@@ -1338,7 +1428,7 @@ a:hover {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .issue-key {
@@ -1360,14 +1450,27 @@ a:hover {
 }
 
 .issue-total {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
   font-size: 14px;
   font-weight: 600;
   color: var(--text);
   white-space: nowrap;
 }
 
+.issue-total-sep {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.issue-total-est {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
 .issue-summary {
-  margin: 0 0 12px;
+  margin: 0;
   font-size: 15px;
   font-weight: 500;
   line-height: 1.35;
@@ -1377,13 +1480,14 @@ a:hover {
 .entry-list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 2px 16px 8px;
   border-top: 1px solid var(--border);
+  background: var(--surface);
 }
 
 .entry-row {
   display: grid;
-  grid-template-columns: 88px 1fr;
+  grid-template-columns: 96px 1fr;
   gap: 12px;
   padding: 12px 0;
   border-bottom: 1px solid var(--border);
@@ -1396,18 +1500,27 @@ a:hover {
 .entry-time-col {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  align-items: flex-start;
 }
 
 .entry-duration {
-  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 12px;
   font-weight: 600;
   color: var(--text);
+  line-height: 1.4;
 }
 
 .entry-clock {
   font-size: 12px;
   color: var(--text-secondary);
+  padding-left: 2px;
 }
 
 .entry-comment {

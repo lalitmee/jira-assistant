@@ -1,4 +1,15 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import type { DayBucket } from '../api';
 import {
   DayChip,
@@ -11,6 +22,13 @@ import {
 } from './DayChip';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/** Fraction of page width required to commit a swipe to the neighbor week. */
+const WEEK_SWIPE_THRESHOLD = 0.4;
+/** Horizontal velocity (px/ms) that commits a fling even below the distance threshold. */
+const WEEK_FLING_VELOCITY_PX_MS = 0.5;
+/** Ignore tiny moves so day-chip clicks still register. */
+const WEEK_DRAG_DEADZONE_PX = 8;
 
 function weekStartsInRange(from: string, to: string): string[] {
   const start = weekContaining(from).from;
@@ -30,6 +48,10 @@ function focusIndex(weekStarts: string[], focusSunday: string): number {
   return Math.max(0, weekStarts.length - 1);
 }
 
+function clampIndex(idx: number, length: number): number {
+  return Math.min(Math.max(idx, 0), Math.max(0, length - 1));
+}
+
 type WeekProps = {
   focusSunday: string;
   rangeFrom: string;
@@ -39,6 +61,16 @@ type WeekProps = {
   loading?: boolean;
   onSelect: (iso: string) => void;
   onFocusWeek: (sundayIso: string) => void;
+};
+
+type DragState = {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  startT: number;
+  offset: number;
+  dragging: boolean;
+  suppressClick: boolean;
 };
 
 export function WeekView({
@@ -55,104 +87,215 @@ export function WeekView({
     () => weekStartsInRange(rangeFrom, rangeTo),
     [rangeFrom, rangeTo],
   );
-  const scrollerRef = useRef<HTMLDivElement>(null);
-  const skipScrollNotify = useRef(false);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const focusSundayRef = useRef(focusSunday);
   focusSundayRef.current = focusSunday;
-  const [ready, setReady] = useState(false);
-  const [labelSunday, setLabelSunday] = useState(focusSunday);
+  const indexRef = useRef(0);
+  const dragRef = useRef<DragState | null>(null);
+  const suppressClickRef = useRef(false);
 
+  const [ready, setReady] = useState(false);
+  const [index, setIndex] = useState(() => focusIndex(weekStarts, focusSunday));
+  const [pageWidth, setPageWidth] = useState(0);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [animating, setAnimating] = useState(false);
+  const [labelSunday, setLabelSunday] = useState(
+    () => weekStarts[focusIndex(weekStarts, focusSunday)] ?? focusSunday,
+  );
+
+  indexRef.current = index;
+
+  const maxIndex = Math.max(0, weekStarts.length - 1);
+  const canPrev = index > 0;
+  const canNext = index < maxIndex;
+
+  const commitWeek = useCallback(
+    (nextIndex: number) => {
+      const clamped = clampIndex(nextIndex, weekStarts.length);
+      const sun = weekStarts[clamped];
+      if (!sun) return;
+      setIndex(clamped);
+      setLabelSunday(sun);
+      setDragOffset(0);
+      setAnimating(true);
+      if (sun !== focusSundayRef.current) onFocusWeek(sun);
+    },
+    [onFocusWeek, weekStarts],
+  );
+
+  const bounceHome = useCallback(() => {
+    setDragOffset(0);
+    setAnimating(true);
+  }, []);
+
+  const goToWeek = useCallback(
+    (nextIndex: number) => {
+      if (dragRef.current?.dragging) return;
+      commitWeek(nextIndex);
+    },
+    [commitWeek],
+  );
+
+  // Sync when focus or window changes from outside (layout switch, reload).
   useEffect(() => {
-    setLabelSunday(
-      weekStarts.includes(focusSunday)
-        ? focusSunday
-        : weekStarts[weekStarts.length - 1] ?? focusSunday,
-    );
+    const idx = focusIndex(weekStarts, focusSunday);
+    const sun = weekStarts[idx] ?? focusSunday;
+    setIndex(idx);
+    setLabelSunday(sun);
+    setDragOffset(0);
   }, [focusSunday, weekStarts]);
 
-  // Place only when the loaded week window changes — not on every focus update from scrolling
-  // (re-placing on focusSunday caused a white flash mid-snap).
   useLayoutEffect(() => {
-    const el = scrollerRef.current;
+    const el = viewportRef.current;
     if (!el) return;
 
+    let placed = false;
+
     const place = (): boolean => {
-      if (el.clientWidth === 0) return false;
+      const w = el.clientWidth;
+      if (w === 0) return false;
+      setPageWidth(w);
       const idx = focusIndex(weekStarts, focusSundayRef.current);
-      const target = idx * el.clientWidth;
-      skipScrollNotify.current = true;
-      el.scrollLeft = target;
+      setIndex(idx);
       setLabelSunday(weekStarts[idx] ?? focusSundayRef.current);
+      setDragOffset(0);
+      setAnimating(false);
       setReady(true);
-      requestAnimationFrame(() => {
-        skipScrollNotify.current = false;
-      });
+      placed = true;
       return true;
     };
 
-    if (place()) return undefined;
+    place();
 
     const ro = new ResizeObserver(() => {
-      if (place()) ro.disconnect();
+      const w = el.clientWidth;
+      if (w === 0) return;
+      if (!placed) {
+        place();
+        return;
+      }
+      setPageWidth(w);
     });
     ro.observe(el);
     return () => ro.disconnect();
   }, [weekStarts, rangeFrom, rangeTo, loading]);
 
-  useEffect(() => {
-    const el = scrollerRef.current;
+  const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 || loading) return;
+    // Let day chips / controls receive a normal click — don't capture yet.
+    const target = e.target as Element | null;
+    if (target?.closest('button, a, input, textarea, select, [role="button"]')) return;
+
+    const el = viewportRef.current;
+    if (!el) return;
+    suppressClickRef.current = false;
+    dragRef.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      startT: e.timeStamp,
+      offset: 0,
+      dragging: false,
+      suppressClick: false,
+    };
+    setAnimating(false);
+  };
+
+  const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    const el = viewportRef.current;
     if (!el) return;
 
-    let settleTimer = 0;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
 
-    const pageWidth = () => el.clientWidth;
-
-    const nearestIndex = () => {
-      const w = pageWidth();
-      if (w === 0) return 0;
-      const maxIdx = Math.max(0, weekStarts.length - 1);
-      return Math.min(Math.max(Math.round(el.scrollLeft / w), 0), maxIdx);
-    };
-
-    /** Force exact page alignment — CSS snap alone often stalls mid-page on trackpads. */
-    const snapToNearest = () => {
-      if (skipScrollNotify.current) return;
-      const w = pageWidth();
-      if (w === 0) return;
-      const idx = nearestIndex();
-      const target = idx * w;
-      if (Math.abs(el.scrollLeft - target) > 1) {
-        skipScrollNotify.current = true;
-        el.scrollLeft = target;
-        requestAnimationFrame(() => {
-          skipScrollNotify.current = false;
-        });
+    if (!drag.dragging) {
+      if (Math.abs(dx) < WEEK_DRAG_DEADZONE_PX) return;
+      if (Math.abs(dy) > Math.abs(dx)) {
+        dragRef.current = null;
+        return;
       }
-      const sun = weekStarts[idx];
-      if (!sun) return;
-      setLabelSunday(sun);
-      if (sun !== focusSundayRef.current) onFocusWeek(sun);
-    };
+      drag.dragging = true;
+      drag.suppressClick = true;
+      suppressClickRef.current = true;
+      el.setPointerCapture(e.pointerId);
+    }
 
-    const onScroll = () => {
-      if (skipScrollNotify.current || pageWidth() === 0) return;
-      const sun = weekStarts[nearestIndex()];
-      if (sun) setLabelSunday(sun);
-      window.clearTimeout(settleTimer);
-      settleTimer = window.setTimeout(snapToNearest, 80);
-    };
+    let offset = dx;
+    const atStart = indexRef.current <= 0 && offset > 0;
+    const atEnd = indexRef.current >= maxIndex && offset < 0;
+    if (atStart || atEnd) offset *= 0.35;
 
-    el.addEventListener('scroll', onScroll, { passive: true });
-    el.addEventListener('scrollend', snapToNearest);
-    return () => {
-      window.clearTimeout(settleTimer);
-      el.removeEventListener('scroll', onScroll);
-      el.removeEventListener('scrollend', snapToNearest);
-    };
-  }, [weekStarts, onFocusWeek]);
+    drag.offset = offset;
+    setDragOffset(offset);
+  };
+
+  const finishPointer = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    const el = viewportRef.current;
+    if (el?.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+    dragRef.current = null;
+
+    if (!drag.dragging) {
+      setDragOffset(0);
+      return;
+    }
+
+    const width = el?.clientWidth || pageWidth;
+    const offset = drag.offset;
+    const elapsed = Math.max(1, e.timeStamp - drag.startT);
+    const velocity = offset / elapsed;
+    const threshold = width * WEEK_SWIPE_THRESHOLD;
+
+    let delta = 0;
+    if (width > 0 && (offset <= -threshold || velocity <= -WEEK_FLING_VELOCITY_PX_MS)) {
+      delta = 1;
+    } else if (width > 0 && (offset >= threshold || velocity >= WEEK_FLING_VELOCITY_PX_MS)) {
+      delta = -1;
+    }
+
+    if (delta !== 0) {
+      const next = clampIndex(indexRef.current + delta, weekStarts.length);
+      if (next !== indexRef.current) {
+        commitWeek(next);
+        return;
+      }
+    }
+    bounceHome();
+  };
+
+  const onClickCapture = (e: ReactMouseEvent) => {
+    if (!suppressClickRef.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+    suppressClickRef.current = false;
+  };
+
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'ArrowLeft' && canPrev) {
+      e.preventDefault();
+      goToWeek(index - 1);
+    } else if (e.key === 'ArrowRight' && canNext) {
+      e.preventDefault();
+      goToWeek(index + 1);
+    }
+  };
+
+  const trackStyle: CSSProperties = {
+    transform: `translate3d(${-index * pageWidth + dragOffset}px, 0, 0)`,
+    width: pageWidth > 0 ? pageWidth * weekStarts.length : undefined,
+    transition: animating ? 'transform 220ms ease-out' : 'none',
+  };
 
   return (
-    <div className={`week-view-wrap${loading ? ' is-loading' : ''}${ready ? '' : ' is-placing'}`}>
+    <div
+      className={`week-view-wrap${loading ? ' is-loading' : ''}${ready ? '' : ' is-placing'}`}
+      tabIndex={0}
+      onKeyDown={onKeyDown}
+      aria-label="Week view"
+    >
       {loading ? (
         <div className="strip-loading" role="status" aria-live="polite">
           <div className="spinner" />
@@ -160,39 +303,83 @@ export function WeekView({
         </div>
       ) : null}
 
-      <div className="week-label" aria-live="polite">
+      <div className="week-nav-label" aria-live="polite">
         {weekLabel(labelSunday)}
       </div>
 
-      <div
-        ref={scrollerRef}
-        className="week-carousel"
-        role="list"
-        aria-label="Week view"
-      >
-        {weekStarts.map((sun) => {
-          const { dates } = weekContaining(sun);
-          return (
-            <div key={sun} className="week-page" role="listitem">
-              <div className="card-row">
-                {dates.map((iso) => {
-                  const outOfRange = iso < rangeFrom || iso > rangeTo;
-                  return (
-                    <div key={iso} className="card-cell">
-                      <DayChip
-                        iso={iso}
-                        bucket={days[iso]}
-                        selected={selected === iso}
-                        outOfRange={outOfRange}
-                        onSelect={onSelect}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
+      <div className="week-stage">
+        <button
+          type="button"
+          className="week-hang-btn week-hang-prev"
+          onClick={() => goToWeek(index - 1)}
+          disabled={loading || !canPrev}
+          aria-label="Previous week"
+        >
+          <svg className="week-hang-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M15.4 4.6a1.2 1.2 0 0 1 0 1.7L10.7 11l4.7 4.7a1.2 1.2 0 1 1-1.7 1.7l-5.5-5.5a1.2 1.2 0 0 1 0-1.7l5.5-5.5a1.2 1.2 0 0 1 1.7 0z"
+              fill="currentColor"
+            />
+          </svg>
+        </button>
+
+        <div
+          ref={viewportRef}
+          className="week-carousel"
+          role="list"
+          aria-label="Week pages"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={finishPointer}
+          onPointerCancel={finishPointer}
+          onClickCapture={onClickCapture}
+        >
+          <div className="week-track" style={trackStyle}>
+            {weekStarts.map((sun) => {
+              const { dates } = weekContaining(sun);
+              return (
+                <div
+                  key={sun}
+                  className="week-page"
+                  role="listitem"
+                  style={pageWidth > 0 ? { width: pageWidth } : undefined}
+                >
+                  <div className="card-row">
+                    {dates.map((iso) => {
+                      const outOfRange = iso < rangeFrom || iso > rangeTo;
+                      return (
+                        <div key={iso} className="card-cell">
+                          <DayChip
+                            iso={iso}
+                            bucket={days[iso]}
+                            selected={selected === iso}
+                            outOfRange={outOfRange}
+                            onSelect={onSelect}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          className="week-hang-btn week-hang-next"
+          onClick={() => goToWeek(index + 1)}
+          disabled={loading || !canNext}
+          aria-label="Next week"
+        >
+          <svg className="week-hang-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M8.6 4.6a1.2 1.2 0 0 1 1.7 0l5.5 5.5a1.2 1.2 0 0 1 0 1.7l-5.5 5.5a1.2 1.2 0 1 1-1.7-1.7l4.7-4.7-4.7-4.7a1.2 1.2 0 0 1 0-1.7z"
+              fill="currentColor"
+            />
+          </svg>
+        </button>
       </div>
     </div>
   );
