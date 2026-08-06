@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 
+# Local session store (OAuth tokens)
+.data/
+
 # Dependencies
 node_modules/
 
