@@ -206,6 +206,14 @@ export function App() {
   const rangeFrom = data?.from ?? from;
   const rangeTo = data?.to ?? to;
 
+  const legend = (
+    <Legend
+      showLegend={showLegend}
+      loading={loading}
+      totalSeconds={data ? displayTotalSeconds : null}
+    />
+  );
+
   if (view === 'settings') {
     return (
       <div className="app-shell">
@@ -234,18 +242,13 @@ export function App() {
             />
           ) : null
         }
-        legend={
-          <Legend
-            showLegend={showLegend}
-            loading={loading}
-            totalSeconds={data ? displayTotalSeconds : null}
-          />
-        }
+        legend={legend}
       />
       <main className="main">
         {error ? <p className="error">{error}</p> : null}
 
         <div className="main-toolbar">
+          <div className="toolbar-legend">{legend}</div>
           <LayoutSwitcher layout={layout} onChange={changeLayout} />
         </div>
 

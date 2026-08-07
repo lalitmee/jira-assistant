@@ -162,6 +162,18 @@ a:hover {
   justify-content: flex-end;
 }
 
+.topbar-legend .legend {
+  justify-content: flex-end;
+  gap: 8px 12px;
+  font-size: 12px;
+}
+
+.toolbar-legend {
+  display: none;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .user-menu {
   position: relative;
   flex-shrink: 0;
@@ -419,6 +431,14 @@ a:hover {
 
   .topbar-legend {
     display: none;
+  }
+
+  .toolbar-legend {
+    display: flex;
+  }
+
+  .main-toolbar {
+    justify-content: space-between;
   }
 }
 
