@@ -12,13 +12,13 @@ import {
   type WorklogsResponse,
 } from './api';
 import { Header } from './components/Header';
+import { Legend } from './components/Legend';
 import { RangeBar } from './components/RangeBar';
 import { LayoutSwitcher } from './components/LayoutSwitcher';
 import { MonthView, WeekView } from './components/CalendarViews';
 import { DayDrawer } from './components/DayDrawer';
 import { SettingsPage } from './components/SettingsPage';
 import { Button } from './components/ui/Button';
-import { Divider } from './components/ui/Divider';
 import {
   isCurrentWeek,
   monthStartForWeek,
@@ -234,42 +234,18 @@ export function App() {
             />
           ) : null
         }
+        legend={
+          <Legend
+            showLegend={showLegend}
+            loading={loading}
+            totalSeconds={data ? displayTotalSeconds : null}
+          />
+        }
       />
       <main className="main">
         {error ? <p className="error">{error}</p> : null}
 
         <div className="main-toolbar">
-          <div className="legend">
-            {showLegend ? (
-              <>
-                <span className="legend-item">
-                  <i className="swatch weekend" /> Weekend
-                </span>
-                <span className="legend-item">
-                  <i className="swatch future" /> Future
-                </span>
-                <span className="legend-item">
-                  <i className="swatch ok" /> 6h–8h
-                </span>
-                <span className="legend-item">
-                  <i className="swatch bad" /> Under 6h
-                </span>
-                <span className="legend-item">
-                  <i className="swatch over" /> Over 8h
-                </span>
-                <Divider orientation="vertical" legend />
-              </>
-            ) : null}
-            <span className="legend-item legend-total">
-              {loading ? (
-                'Loading…'
-              ) : data ? (
-                <>
-                  Total <strong>{formatDuration(displayTotalSeconds)}</strong>
-                </>
-              ) : null}
-            </span>
-          </div>
           <LayoutSwitcher layout={layout} onChange={changeLayout} />
         </div>
 

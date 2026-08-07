@@ -1,3 +1,4 @@
+import type { MouseEvent } from 'react';
 import type { DayBucket, WorklogEntry } from '../api';
 import { estimateStatus, formatDuration } from '../api';
 import { useSettings } from '../SettingsContext';
@@ -23,7 +24,31 @@ type IssueGroup = {
 
 function issueUrl(siteUrl: string, key: string): string {
   const base = siteUrl.replace(/\/$/, '');
-  return `${base}/browse/${key}`;
+  const origin = /^https?:\/\//i.test(base) ? base : `https://${base}`;
+  return `${origin}/browse/${key}`;
+}
+
+function IssueKeyLink({ siteUrl, issueKey }: { siteUrl: string; issueKey: string }) {
+  const url = issueUrl(siteUrl, issueKey);
+
+  const openInNewTab = (e: MouseEvent<HTMLAnchorElement>) => {
+    e.stopPropagation();
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    e.preventDefault();
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  return (
+    <a
+      className="issue-key"
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={openInNewTab}
+    >
+      {issueKey}
+    </a>
+  );
 }
 
 function groupByIssue(worklogs: WorklogEntry[]): IssueGroup[] {
@@ -147,14 +172,7 @@ export function DayDrawer({ open, date, bucket, siteUrl, onClose }: Props) {
                     <span className="entry-clock">{formatTime(wl.started)}</span>
                   </div>
                   <div className="entry-flat-meta">
-                    <a
-                      className="issue-key"
-                      href={issueUrl(siteUrl, wl.issueKey)}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {wl.issueKey}
-                    </a>
+                    <IssueKeyLink siteUrl={siteUrl} issueKey={wl.issueKey} />
                     <p className="entry-comment">
                       {wl.comment || <span className="entry-comment-empty">No comment</span>}
                     </p>
@@ -174,14 +192,7 @@ export function DayDrawer({ open, date, bucket, siteUrl, onClose }: Props) {
                   <article className={`issue-card ${estimateClass(group)}`} key={group.issueKey}>
                     <div className="issue-card-top">
                       <header className="issue-card-header">
-                        <a
-                          className="issue-key"
-                          href={issueUrl(siteUrl, group.issueKey)}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          {group.issueKey}
-                        </a>
+                        <IssueKeyLink siteUrl={siteUrl} issueKey={group.issueKey} />
                         {settings.drawerShowEstimates ? (
                           <span
                             className="issue-total"
