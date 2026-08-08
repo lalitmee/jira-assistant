@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Me } from '../api';
 import { Button } from './ui/Button';
-import { ChevronLeft } from './ui/icons';
+import { ArrowLeft } from './ui/icons';
 import { ThemeToggle } from './ThemeToggle';
 import { UserMenu } from './UserMenu';
 
@@ -19,7 +19,7 @@ export function Header({ me, onLogout, controls, onOpenSettings, onBack }: Props
       <div className="brand">
         {onBack ? (
           <Button variant="icon" size="sm" onClick={onBack} aria-label="Back to calendar">
-            <ChevronLeft />
+            <ArrowLeft />
           </Button>
         ) : (
           <>
