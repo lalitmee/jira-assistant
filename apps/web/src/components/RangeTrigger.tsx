@@ -7,9 +7,11 @@ type Props = {
   onClick: () => void;
   /** Tighter typography for the header range bar. */
   compact?: boolean;
+  /** Stacked year + range for compact header display. */
+  parts?: { year: string; range: string };
 };
 
-export function RangeTrigger({ label, open, labelledBy, onClick, compact = false }: Props) {
+export function RangeTrigger({ label, open, labelledBy, onClick, compact = false, parts }: Props) {
   return (
     <button
       type="button"
@@ -17,8 +19,16 @@ export function RangeTrigger({ label, open, labelledBy, onClick, compact = false
       onClick={onClick}
       aria-expanded={open}
       aria-labelledby={labelledBy}
+      aria-label={parts ? `${parts.range}, ${parts.year}` : undefined}
     >
-      <span className={compact ? styles.headerValue : styles.value}>{label}</span>
+      {compact && parts ? (
+        <span className="week-nav-label-stack">
+          <span className="week-nav-year">{parts.year}</span>
+          <span className="week-nav-range">{parts.range}</span>
+        </span>
+      ) : (
+        <span className={compact ? styles.headerValue : styles.value}>{label}</span>
+      )}
       <svg className={styles.chevron} viewBox="0 0 24 24" aria-hidden="true">
         <path
           fill="currentColor"

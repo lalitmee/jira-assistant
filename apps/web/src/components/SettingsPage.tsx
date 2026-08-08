@@ -50,7 +50,7 @@ export function SettingsPage() {
       <SettingsSection title="Calendar">
         <SettingsRow
           label="Grid layout"
-          description="Connected cells with dividers. Off uses separate day cards."
+          description="Grid lines around spaced day cards. Off uses floating cards with gaps."
         >
           <Switch
             checked={settings.calendarGrid}

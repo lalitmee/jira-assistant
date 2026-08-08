@@ -37,7 +37,7 @@ export function Header({ me, onLogout, controls, onOpenSettings, onBack }: Props
         )}
       </div>
 
-      {me && !onBack ? <div className="topbar-controls">{controls}</div> : null}
+      <div className="topbar-controls">{me && !onBack ? controls : null}</div>
 
       <div className="user-meta">
         {me ? (

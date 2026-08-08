@@ -132,6 +132,18 @@ export function spanDays(from: string, to: string): number {
   return Math.floor((b.getTime() - a.getTime()) / 86_400_000) + 1;
 }
 
+export function rangeLabelParts(from: string, to: string): { year: string; range: string } {
+  const a = new Date(`${from}T00:00:00`);
+  const b = new Date(`${to}T00:00:00`);
+  const year =
+    a.getFullYear() === b.getFullYear()
+      ? String(a.getFullYear())
+      : `${a.getFullYear()} – ${b.getFullYear()}`;
+  const day = (d: Date) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  if (from === to) return { year, range: day(a) };
+  return { year, range: `${day(a)} – ${day(b)}` };
+}
+
 export const MAX_RANGE_DAYS = 93;
 
 function addDays(from: string, days: number): string {

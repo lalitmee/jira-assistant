@@ -14,6 +14,7 @@ import {
 import { Header } from './components/Header';
 import { Legend } from './components/Legend';
 import { RangeBar } from './components/RangeBar';
+import { WeekBar } from './components/WeekBar';
 import { LayoutSwitcher } from './components/LayoutSwitcher';
 import { MonthView, WeekView } from './components/CalendarViews';
 import { DayDrawer } from './components/DayDrawer';
@@ -332,7 +333,21 @@ export function App() {
               onApply={(f, t) => void load(f, t)}
               onGoToday={() => goToToday()}
             />
-          ) : null
+          ) : (
+            <WeekBar
+              focusSunday={weekFocus}
+              weekStart={weekStart}
+              loading={loading}
+              canNext={!isCurrentWeek(weekFocus, weekStart)}
+              onPrev={() =>
+                focusWeek(shiftWeekAnchor(weekContaining(weekFocus, weekStart).from, -1))
+              }
+              onNext={() =>
+                focusWeek(shiftWeekAnchor(weekContaining(weekFocus, weekStart).from, 1))
+              }
+              onGoToday={() => goToToday()}
+            />
+          )
         }
       />
       <main className="main">
@@ -368,8 +383,6 @@ export function App() {
             weekSwipeEnabled={weekSwipeEnabled}
             onSelect={openDay}
             onFocusWeek={focusWeek}
-            onGoToday={() => goToToday()}
-            isOnCurrentWeek={isCurrentWeek(weekFocus, weekStart)}
           />
         )}
 

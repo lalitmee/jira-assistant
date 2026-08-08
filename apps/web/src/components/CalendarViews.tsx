@@ -11,22 +11,18 @@ import {
   type TransitionEvent,
 } from 'react';
 import type { DayBucket } from '../api';
-import { Button } from './ui/Button';
-import { Divider } from './ui/Divider';
-import { ChevronLeft, ChevronRight } from './ui/icons';
-import type { WeekStart } from '../settings';
-import { useSettings } from '../SettingsContext';
 import {
   DayChip,
   parseLocal,
   shiftWeekAnchor,
   toIso,
   weekContaining,
-  weekLabel,
   weekStartOffset,
   weekStartsInRange,
   weekdayLabels,
 } from './DayChip';
+
+import type { WeekStart } from '../settings';
 
 /** Fraction of page width required to commit a swipe to the neighbor week. */
 const WEEK_SWIPE_THRESHOLD = 0.4;
@@ -47,6 +43,19 @@ function clampIndex(idx: number, length: number): number {
   return Math.min(Math.max(idx, 0), Math.max(0, length - 1));
 }
 
+function WeekdayHeaderRow({ weekStart }: { weekStart: WeekStart }) {
+  const weekdays = weekdayLabels(weekStart);
+  return (
+    <div className="card-row month-weekday-row" role="row">
+      {weekdays.map((d) => (
+        <div key={d} className="month-weekday" role="columnheader">
+          {d}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 type WeekProps = {
   focusSunday: string;
   rangeFrom: string;
@@ -59,8 +68,6 @@ type WeekProps = {
   weekSwipeEnabled: boolean;
   onSelect: (iso: string) => void;
   onFocusWeek: (sundayIso: string) => void;
-  onGoToday: () => void;
-  isOnCurrentWeek: boolean;
 };
 
 type DragState = {
@@ -85,12 +92,7 @@ export function WeekView({
   weekSwipeEnabled,
   onSelect,
   onFocusWeek,
-  onGoToday,
-  isOnCurrentWeek,
 }: WeekProps) {
-  const { settings } = useSettings();
-  const chipVariant = settings.calendarGrid ? 'cell' : 'card';
-
   const weekStarts = useMemo(
     () => weekStartsInRange(rangeFrom, rangeTo, weekStart),
     [rangeFrom, rangeTo, weekStart],
@@ -99,27 +101,40 @@ export function WeekView({
   const indexRef = useRef(0);
   const dragRef = useRef<DragState | null>(null);
   const suppressClickRef = useRef(false);
+  const internalNavRef = useRef(false);
 
   const [ready, setReady] = useState(false);
   const [index, setIndex] = useState(() => focusIndex(weekStarts, focusSunday));
   const [pageWidth, setPageWidth] = useState(0);
   const [dragOffset, setDragOffset] = useState(0);
   const [animating, setAnimating] = useState(false);
-  const [labelSunday, setLabelSunday] = useState(
-    () => weekStarts[focusIndex(weekStarts, focusSunday)] ?? focusSunday,
-  );
   const [prevFocusSunday, setPrevFocusSunday] = useState(focusSunday);
   const [prevWeekStartsKey, setPrevWeekStartsKey] = useState(() => weekStarts.join('|'));
 
   const weekStartsKey = weekStarts.join('|');
   if (focusSunday !== prevFocusSunday || weekStartsKey !== prevWeekStartsKey) {
-    setPrevFocusSunday(focusSunday);
-    setPrevWeekStartsKey(weekStartsKey);
     const idx = focusIndex(weekStarts, focusSunday);
-    const sun = weekStarts[idx] ?? focusSunday;
-    setIndex(idx);
-    setLabelSunday(sun);
-    setDragOffset(0);
+    const prevIdx = indexRef.current;
+
+    if (internalNavRef.current) {
+      setPrevFocusSunday(focusSunday);
+      setPrevWeekStartsKey(weekStartsKey);
+    } else {
+      const focusChanged = focusSunday !== prevFocusSunday;
+      const rangeChanged = weekStartsKey !== prevWeekStartsKey;
+      const adjacent = focusChanged && !rangeChanged && Math.abs(idx - prevIdx) === 1;
+
+      setPrevFocusSunday(focusSunday);
+      setPrevWeekStartsKey(weekStartsKey);
+
+      if (idx !== prevIdx) {
+        setIndex(idx);
+        setDragOffset(0);
+        if (adjacent) setAnimating(true);
+      } else if (rangeChanged) {
+        setDragOffset(0);
+      }
+    }
   }
 
   useLayoutEffect(() => {
@@ -141,8 +156,8 @@ export function WeekView({
       const clamped = clampIndex(nextIndex, weekStarts.length);
       const sun = weekStarts[clamped];
       if (!sun) return;
+      internalNavRef.current = true;
       setIndex(clamped);
-      setLabelSunday(sun);
       setDragOffset(0);
       setAnimating(true);
       if (sun !== focusSunday) onFocusWeek(sun);
@@ -178,13 +193,14 @@ export function WeekView({
       const w = el.clientWidth;
       if (w === 0) return false;
       setPageWidth(w);
-      const idx = focusIndex(weekStarts, focusSunday);
-      setIndex(idx);
-      setLabelSunday(weekStarts[idx] ?? focusSunday);
-      setDragOffset(0);
-      setAnimating(false);
-      setReady(true);
-      placed = true;
+      if (!placed) {
+        const idx = focusIndex(weekStarts, focusSunday);
+        setIndex(idx);
+        setDragOffset(0);
+        setAnimating(false);
+        setReady(true);
+        placed = true;
+      }
       return true;
     };
 
@@ -201,7 +217,7 @@ export function WeekView({
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [weekStarts, rangeFrom, rangeTo, loading, focusSunday]);
+  }, [weekStarts, rangeFrom, rangeTo, loading]);
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (!weekSwipeEnabled || e.button !== 0 || loading) return;
@@ -321,6 +337,7 @@ export function WeekView({
 
   const onTrackTransitionEnd = (e: TransitionEvent<HTMLDivElement>) => {
     if (e.propertyName !== 'transform') return;
+    internalNavRef.current = false;
     setAnimating(false);
   };
 
@@ -338,32 +355,8 @@ export function WeekView({
         </div>
       ) : null}
 
-      <div className="week-nav-bar">
-        <span className="week-nav-label" aria-live="polite">
-          {weekLabel(labelSunday, weekStart)}
-        </span>
-        <Divider orientation="vertical" />
-        <Button
-          variant="secondary"
-          disabled={loading || isOnCurrentWeek}
-          aria-label="Go to today"
-          onClick={onGoToday}
-        >
-          Today
-        </Button>
-      </div>
-
-      <div className="week-stage">
-        <Button
-          variant="icon"
-          size="sm"
-          onClick={() => goToWeek(index - 1)}
-          disabled={loading || !canPrev}
-          aria-label="Previous week"
-        >
-          <ChevronLeft />
-        </Button>
-
+      <div className="week-carousel-column">
+        <WeekdayHeaderRow weekStart={weekStart} />
         <div
           ref={viewportRef}
           className="week-carousel"
@@ -399,7 +392,7 @@ export function WeekView({
                             bucket={days[iso]}
                             selected={selected === iso}
                             outOfRange={outOfRange}
-                            variant={chipVariant}
+                            hideWeekday
                             showFutureDays={showFutureDays}
                             onSelect={onSelect}
                           />
@@ -412,16 +405,6 @@ export function WeekView({
             })}
           </div>
         </div>
-
-        <Button
-          variant="icon"
-          size="sm"
-          onClick={() => goToWeek(index + 1)}
-          disabled={loading || !canNext}
-          aria-label="Next week"
-        >
-          <ChevronRight />
-        </Button>
       </div>
     </div>
   );
@@ -451,9 +434,6 @@ export function MonthView({
   showFutureDays,
   onSelect,
 }: MonthProps) {
-  const { settings } = useSettings();
-  const chipVariant = settings.calendarGrid ? 'cell' : 'card';
-
   const anchor = parseLocal(monthIso);
   const monthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
   const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
@@ -462,8 +442,6 @@ export function MonthView({
   gridStart.setDate(gridStart.getDate() - weekStartOffset(gridStart, weekStart));
   const gridEnd = new Date(monthEnd);
   gridEnd.setDate(gridEnd.getDate() + (6 - weekStartOffset(gridEnd, weekStart)));
-
-  const weekdays = weekdayLabels(weekStart);
 
   const cells: Array<{ iso: string; inMonth: boolean }> = [];
   const cur = new Date(gridStart);
@@ -489,20 +467,13 @@ export function MonthView({
       ) : null}
 
       <div className="month-view" role="grid" aria-label="Month calendar">
-        <div className="card-row month-weekday-row" role="row">
-          {weekdays.map((d) => (
-            <div key={d} className="month-weekday" role="columnheader">
-              {d}
-            </div>
-          ))}
-        </div>
+        <WeekdayHeaderRow weekStart={weekStart} />
         {rows.map((row) => (
           <div className="card-row" key={row[0].iso} role="row">
             {row.map((cell) => {
-              if (!cell.inMonth) {
-                return <div key={cell.iso} className="card-cell empty" role="gridcell" />;
-              }
-              const outOfRange = cell.iso < rangeFrom || cell.iso > rangeTo;
+              const outsideMonth = !cell.inMonth;
+              const outOfRange =
+                !outsideMonth && (cell.iso < rangeFrom || cell.iso > rangeTo);
               return (
                 <div key={cell.iso} className="card-cell" role="gridcell">
                   <DayChip
@@ -510,7 +481,7 @@ export function MonthView({
                     bucket={days[cell.iso]}
                     selected={selected === cell.iso}
                     outOfRange={outOfRange}
-                    variant={chipVariant}
+                    outsideMonth={outsideMonth}
                     hideWeekday
                     showFutureDays={showFutureDays}
                     onSelect={onSelect}

@@ -25,6 +25,23 @@
 .headerTrigger {
   composes: trigger;
   height: 40px;
+  gap: 8px;
+}
+
+.headerTrigger :global(.week-nav-label-stack) {
+  align-items: center;
+  min-width: 0;
+  text-align: center;
+}
+
+.headerTrigger :global(.week-nav-year) {
+  text-align: center;
+}
+
+.headerTrigger :global(.week-nav-range) {
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
 }
 
 .headerValue {

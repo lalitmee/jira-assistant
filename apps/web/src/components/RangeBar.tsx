@@ -7,6 +7,7 @@ import {
   currentMonthRange,
   isCurrentMonth,
   lastMonthRange,
+  rangeLabelParts,
   shiftMonthRange,
   spanDays,
   toIsoDate,
@@ -66,12 +67,17 @@ export function RangeBar({ from, to, loading, onApply, onGoToday }: Props) {
   const today = useMemo(() => parseISO(toIsoDate(new Date())), []);
   const disableFutureDays = useMemo(() => ({ after: today }), [today]);
 
-  const label = useMemo(() => {
-    if (from === to) return format(parseISO(from), 'd MMM yyyy');
-    return `${format(parseISO(from), 'd MMM yyyy')} – ${format(parseISO(to), 'd MMM yyyy')}`;
-  }, [from, to]);
+  const rangeParts = useMemo(() => rangeLabelParts(from, to), [from, to]);
 
-  const monthLabel = useMemo(() => format(parseISO(from), 'MMM yyyy'), [from]);
+  const label = useMemo(() => {
+    const { year, range } = rangeParts;
+    return year.includes('–') ? `${range} (${year})` : `${range} ${year}`;
+  }, [rangeParts]);
+
+  const monthNavParts = useMemo(() => {
+    const d = parseISO(from);
+    return { year: format(d, 'yyyy'), range: format(d, 'MMM') };
+  }, [from]);
 
   const draftFrom = draft?.from ? toIsoDate(draft.from) : '';
   const draftTo = draft?.to ? toIsoDate(draft.to) : draftFrom;
@@ -126,20 +132,22 @@ export function RangeBar({ from, to, loading, onApply, onGoToday }: Props) {
         <span className="range-field-label" id="range-field-label">
           Range
         </span>
-        <RangeTrigger
-          label={label}
-          open={open}
-          labelledBy="range-field-label"
-          compact
-          onClick={() => {
-            setDraft(toRange(from, to));
-            setPickerMonth(parseISO(from));
-            setOpen((v) => !v);
-          }}
-        />
+        <div className="range-trigger-wrap">
+          <RangeTrigger
+            label={label}
+            parts={rangeParts}
+            open={open}
+            labelledBy="range-field-label"
+            compact
+            onClick={() => {
+              setDraft(toRange(from, to));
+              setPickerMonth(parseISO(from));
+              setOpen((v) => !v);
+            }}
+          />
 
-        {open ? (
-          <div className="range-popover" role="dialog" aria-label="Choose date range">
+          {open ? (
+            <div className="range-popover" role="dialog" aria-label="Choose date range">
             <div className="range-presets">
               <Button
                 variant="secondary"
@@ -200,25 +208,29 @@ export function RangeBar({ from, to, loading, onApply, onGoToday }: Props) {
               </div>
             </div>
           </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
 
       <Divider orientation="vertical" />
 
-      <div className="month-nav">
+      <div className="month-nav week-nav">
         <Button
           variant="icon"
-          size="md"
+          size="sm"
           onClick={goPrevMonth}
           disabled={loading}
           aria-label="Previous month"
         >
           <ChevronLeft />
         </Button>
-        <span className="month-nav-label">{monthLabel}</span>
+        <div className="week-nav-label-stack" aria-live="polite">
+          <span className="week-nav-year">{monthNavParts.year}</span>
+          <span className="week-nav-range">{monthNavParts.range}</span>
+        </div>
         <Button
           variant="icon"
-          size="md"
+          size="sm"
           onClick={goNextMonth}
           disabled={loading || !canGoNextMonth(from)}
           aria-label="Next month"

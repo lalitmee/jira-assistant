@@ -187,22 +187,25 @@ export function isCurrentWeek(focusStartIso: string, weekStart: WeekStart = 'sun
   return weekContaining(today, weekStart).from === focusStartIso;
 }
 
-export function weekLabel(anchorIso: string, weekStart: WeekStart = 'sunday'): string {
+export function weekLabelParts(
+  anchorIso: string,
+  weekStart: WeekStart = 'sunday',
+): { year: string; range: string } {
   const { from, to } = weekContaining(anchorIso, weekStart);
   const a = parseLocal(from);
   const b = parseLocal(to);
-  const sameYear = a.getFullYear() === b.getFullYear();
-  const left = a.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    ...(sameYear ? {} : { year: 'numeric' }),
-  });
-  const right = b.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-  return `${left} – ${right}`;
+  const year =
+    a.getFullYear() === b.getFullYear()
+      ? String(a.getFullYear())
+      : `${a.getFullYear()} – ${b.getFullYear()}`;
+  const left = a.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const right = b.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return { year, range: `${left} – ${right}` };
+}
+
+export function weekLabel(anchorIso: string, weekStart: WeekStart = 'sunday'): string {
+  const { year, range } = weekLabelParts(anchorIso, weekStart);
+  return year.includes('–') ? `${range} (${year})` : `${range} ${year}`;
 }
 
 export function readStoredLayout(): CalendarLayout {
@@ -226,6 +229,8 @@ type DayChipProps = {
   selected: boolean;
   /** Outside the loaded data range (e.g. padding cells in month grid). */
   outOfRange?: boolean;
+  /** Adjacent-month padding day in month grid (not selectable). */
+  outsideMonth?: boolean;
   /** Flat cell inside a hairline calendar grid (no card chrome). */
   variant?: 'card' | 'cell';
   /** Hide weekday line when a shared weekday header is present. */
@@ -240,6 +245,7 @@ export function DayChip({
   bucket,
   selected,
   outOfRange = false,
+  outsideMonth = false,
   variant = 'card',
   hideWeekday = false,
   showFutureDays = true,
@@ -253,10 +259,11 @@ export function DayChip({
 
   if (!showFutureDays && isFuture) return null;
   const seconds = bucket?.totalSeconds ?? 0;
-  const status = isFuture || outOfRange ? 'skip' : hoursStatus(seconds, isWeekend);
+  const status =
+    isFuture || outOfRange || outsideMonth ? 'skip' : hoursStatus(seconds, isWeekend);
   const hasWorklogs = seconds > 0;
   const weekendDisabled = isWeekend && !hasWorklogs;
-  const disabled = outOfRange || weekendDisabled || isFuture;
+  const disabled = outOfRange || weekendDisabled || isFuture || outsideMonth;
 
   const weekdayLabel = d.toLocaleDateString(undefined, { weekday: 'short' });
   const dayNum = d.getDate();
@@ -270,6 +277,7 @@ export function DayChip({
     disabled ? 'disabled' : '',
     isFuture ? 'future' : '',
     outOfRange ? 'out-of-range' : '',
+    outsideMonth ? 'outside-month' : '',
     status === 'ok' ? 'hours-ok' : '',
     status === 'under' ? 'hours-bad' : '',
     status === 'over' ? 'hours-over' : '',
