@@ -769,9 +769,13 @@ a:hover {
 }
 
 .week-view-wrap.is-loading .week-carousel,
-.month-view-wrap.is-loading .month-view {
+.month-view-wrap.is-loading .week-carousel {
   opacity: 0.45;
   pointer-events: none;
+}
+
+.month-view-wrap.is-loading .month-view {
+  opacity: 1;
 }
 
 .week-view-wrap:focus {
@@ -808,11 +812,23 @@ a:hover {
   cursor: grabbing;
 }
 
-.week-view-wrap.is-placing .week-carousel {
+.week-carousel--nav-only {
+  cursor: default;
+  touch-action: auto;
+  user-select: auto;
+}
+
+.week-carousel--nav-only:active {
+  cursor: default;
+}
+
+.week-view-wrap.is-placing .week-carousel,
+.month-view-wrap.is-placing .week-carousel {
   visibility: hidden;
 }
 
-.week-view-wrap:not(.is-placing) .week-carousel {
+.week-view-wrap:not(.is-placing) .week-carousel,
+.month-view-wrap:not(.is-placing) .week-carousel {
   visibility: visible;
 }
 

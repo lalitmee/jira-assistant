@@ -32,6 +32,10 @@ type Props = {
   weekWindowWeeks?: WeekWindowWeeks;
   onPrevWeek?: () => void;
   onNextWeek?: () => void;
+  onPrevMonth?: () => void;
+  onNextMonth?: () => void;
+  /** Disables prev/next only; falls back to `loading` when omitted. */
+  navLoading?: boolean;
 };
 
 function toRange(from: string, to: string): DateRange {
@@ -70,6 +74,7 @@ function isPickerAtCurrentMonth(pickerMonth: Date, monthsShown: number, endMonth
 export function RangeBar(props: Props) {
   const { from, to, loading, onApply, onGoToday } = props;
   const navMode = props.navMode ?? 'month';
+  const navBusy = props.navLoading ?? loading;
 
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<DateRange | undefined>(() => toRange(from, to));
@@ -132,6 +137,10 @@ export function RangeBar(props: Props) {
       props.onPrevWeek?.();
       return;
     }
+    if (props.onPrevMonth) {
+      props.onPrevMonth();
+      return;
+    }
     const next = shiftMonthRange(from, -1);
     onApply(next.from, next.to);
   };
@@ -139,6 +148,10 @@ export function RangeBar(props: Props) {
   const goNext = () => {
     if (navMode === 'week') {
       props.onNextWeek?.();
+      return;
+    }
+    if (props.onNextMonth) {
+      props.onNextMonth();
       return;
     }
     if (!canGoNextMonth(from)) return;
@@ -165,7 +178,7 @@ export function RangeBar(props: Props) {
             variant="icon"
             size="sm"
             onClick={goPrev}
-            disabled={loading}
+            disabled={navBusy}
             aria-label={prevLabel}
           >
             <ChevronLeft />
@@ -251,7 +264,7 @@ export function RangeBar(props: Props) {
             variant="icon"
             size="sm"
             onClick={goNext}
-            disabled={loading || !canGoNext}
+            disabled={navBusy || !canGoNext}
             aria-label={nextLabel}
           >
             <ChevronRight />

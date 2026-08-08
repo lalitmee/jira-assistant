@@ -114,6 +114,22 @@ export function isCurrentMonth(fromIso: string): boolean {
   return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth();
 }
 
+/** ISO date of the 1st of the calendar month containing `fromIso`. */
+export function monthAnchor(fromIso: string): string {
+  const d = new Date(`${fromIso}T00:00:00`);
+  return toIsoDate(new Date(d.getFullYear(), d.getMonth(), 1));
+}
+
+/** Month anchors for a three-page window: previous, focus, next. */
+export function monthWindowPages(focusAnchorIso: string): string[] {
+  const anchor = monthAnchor(focusAnchorIso);
+  return [
+    shiftMonthRange(anchor, -1).from,
+    anchor,
+    shiftMonthRange(anchor, 1).from,
+  ];
+}
+
 /** Current calendar month, capped at today. */
 export function currentMonthRange(): { from: string; to: string } {
   const today = new Date();

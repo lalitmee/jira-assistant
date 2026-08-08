@@ -6,6 +6,9 @@ import {
   fetchWorklogs,
   logout,
   mergeWorklogsResponses,
+  canGoNextMonth,
+  monthRange,
+  shiftMonthRange,
   type Me,
   type WorklogsResponse,
 } from './api';
@@ -13,7 +16,7 @@ import { Header } from './components/Header';
 import { Legend } from './components/Legend';
 import { RangeBar } from './components/RangeBar';
 import { LayoutSwitcher } from './components/LayoutSwitcher';
-import { MonthView, WeekView } from './components/CalendarViews';
+import { MonthView, WeekView, type MonthViewHandle } from './components/CalendarViews';
 import { DayDrawer } from './components/DayDrawer';
 import { SettingsPage } from './components/SettingsPage';
 import { Button } from './components/ui/Button';
@@ -86,6 +89,7 @@ export function App() {
   const prefetchInFlight = useRef(new Set<string>());
   const loadGenerationRef = useRef(0);
   const prevWeekWindowWeeksRef = useRef(weekWindowWeeks);
+  const monthViewRef = useRef<MonthViewHandle>(null);
 
   const recordLoadedRange = useCallback((rangeFrom: string, rangeTo: string) => {
     setLoadedSegments((prev) => mergeLoadedSegment(prev, rangeFrom, rangeTo));
@@ -205,6 +209,48 @@ export function App() {
     [from, to, weekStart, weekWindowWeeks, prefetchRange],
   );
 
+  const prefetchAdjacentMonths = useCallback(
+    (rangeFrom: string) => {
+      const prev = shiftMonthRange(rangeFrom, -1);
+      void prefetchRange(prev.from, prev.to);
+      if (canGoNextMonth(rangeFrom)) {
+        const next = shiftMonthRange(rangeFrom, 1);
+        void prefetchRange(next.from, next.to);
+      }
+    },
+    [prefetchRange],
+  );
+
+  const syncMonthData = useCallback(
+    (range: { from: string; to: string }) => {
+      setFrom(range.from);
+      setTo(range.to);
+
+      if (!dataRef.current) {
+        void load(range.from, range.to);
+        return;
+      }
+
+      void prefetchRange(range.from, range.to);
+      prefetchAdjacentMonths(range.from);
+    },
+    [load, prefetchAdjacentMonths, prefetchRange],
+  );
+
+  const applyMonthRange = useCallback(
+    (newFrom: string, newTo: string) => {
+      const cached = dataRef.current;
+      if (cached && cached.from <= newTo && cached.to >= newFrom) {
+        setFrom(newFrom);
+        setTo(newTo);
+        void prefetchRange(newFrom, newTo);
+        return;
+      }
+      void load(newFrom, newTo);
+    },
+    [load, prefetchRange],
+  );
+
   const applyWeekRange = useCallback(
     (newFrom: string, newTo: string, focusOverride?: string) => {
       const nextWindow = clampWeekWindowStart(
@@ -294,6 +340,15 @@ export function App() {
     void prefetchRange(chunk.from, chunk.to);
   }, [layout, data, weekFocus, weekStart, from, prefetchRange]);
 
+  useEffect(() => {
+    if (layout !== 'month' || !data) return;
+    if (isRangeCoveredBySegments(loadedSegments, from, to)) {
+      prefetchAdjacentMonths(from);
+      return;
+    }
+    void prefetchRange(from, to);
+  }, [layout, data, from, to, prefetchRange, prefetchAdjacentMonths, loadedSegments]);
+
   const displayTotalSeconds = useMemo(() => {
     if (!data) return 0;
     if (layout === 'month') return data.totalSeconds;
@@ -369,7 +424,14 @@ export function App() {
     data != null &&
     !isRangeCoveredBySegments(loadedSegments, weekVisibleBounds.from, weekVisibleBounds.to);
   const weekFetching = weekBlockingLoad || weekVisibleLoading;
-  const calendarLoading = layout === 'week' ? weekFetching : loading;
+  const monthBlockingLoad = loading && !data;
+  const monthVisibleLoading =
+    layout === 'month' &&
+    !monthBlockingLoad &&
+    data != null &&
+    !isRangeCoveredBySegments(loadedSegments, from, to);
+  const monthFetching = monthBlockingLoad || monthVisibleLoading;
+  const calendarLoading = layout === 'week' ? weekFetching : monthFetching;
 
   const legend = (
     <Legend
@@ -413,11 +475,18 @@ export function App() {
             />
           ) : (
             <RangeBar
+              navMode="month"
               from={from}
               to={to}
-              loading={loading}
-              onApply={(f, t) => void load(f, t)}
+              loading={monthFetching}
+              navLoading={monthBlockingLoad}
+              onApply={applyMonthRange}
               onGoToday={() => goToToday()}
+              onPrevMonth={() => monthViewRef.current?.goPrev()}
+              onNextMonth={() => {
+                if (!canGoNextMonth(from)) return;
+                monthViewRef.current?.goNext();
+              }}
             />
           )
         }
@@ -432,15 +501,19 @@ export function App() {
 
         {layout === 'month' ? (
           <MonthView
-            monthIso={rangeFrom}
-            rangeFrom={rangeFrom}
-            rangeTo={rangeTo}
+            ref={monthViewRef}
+            monthIso={from}
             days={data?.days ?? {}}
             selected={selected}
-            loading={loading}
+            blockingLoad={monthBlockingLoad}
             weekStart={weekStart}
             showFutureDays={showFutureDays}
+            canGoNext={canGoNextMonth(from)}
             onSelect={openDay}
+            onFocusMonth={(anchorIso) => {
+              const d = new Date(`${anchorIso}T00:00:00`);
+              syncMonthData(monthRange(d.getFullYear(), d.getMonth()));
+            }}
           />
         ) : (
           <WeekView
