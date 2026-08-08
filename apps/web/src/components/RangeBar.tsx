@@ -12,6 +12,8 @@ import {
   spanDays,
   toIsoDate,
 } from '../api';
+import { canGoNextWeek, isCurrentWeek } from './DayChip';
+import type { WeekStart } from '../settings';
 import { RangeTrigger } from './RangeTrigger';
 import { Button } from './ui/Button';
 import { Divider } from './ui/Divider';
@@ -24,6 +26,11 @@ type Props = {
   loading: boolean;
   onApply: (from: string, to: string) => void;
   onGoToday: () => void;
+  navMode?: 'month' | 'week';
+  weekFocus?: string;
+  weekStart?: WeekStart;
+  onPrevWeek?: () => void;
+  onNextWeek?: () => void;
 };
 
 function toRange(from: string, to: string): DateRange {
@@ -59,7 +66,10 @@ function isPickerAtCurrentMonth(pickerMonth: Date, monthsShown: number, endMonth
   );
 }
 
-export function RangeBar({ from, to, loading, onApply, onGoToday }: Props) {
+export function RangeBar(props: Props) {
+  const { from, to, loading, onApply, onGoToday } = props;
+  const navMode = props.navMode ?? 'month';
+
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<DateRange | undefined>(() => toRange(from, to));
   const [pickerMonth, setPickerMonth] = useState(() => parseISO(from));
@@ -103,6 +113,10 @@ export function RangeBar({ from, to, loading, onApply, onGoToday }: Props) {
   };
 
   const onCurrentMonth = isCurrentMonth(from);
+  const onCurrentWeek =
+    navMode === 'week' && props.weekFocus && props.weekStart
+      ? isCurrentWeek(props.weekFocus, props.weekStart)
+      : false;
   const pickerOnCurrentMonth = isPickerAtCurrentMonth(pickerMonth, PICKER_MONTHS_SHOWN, today);
 
   const goPickerToday = () => {
@@ -110,16 +124,33 @@ export function RangeBar({ from, to, loading, onApply, onGoToday }: Props) {
     setPickerMonth(new Date(today.getFullYear(), today.getMonth(), 1));
   };
 
-  const goPrevMonth = () => {
+  const goPrev = () => {
+    if (navMode === 'week') {
+      props.onPrevWeek?.();
+      return;
+    }
     const next = shiftMonthRange(from, -1);
     onApply(next.from, next.to);
   };
 
-  const goNextMonth = () => {
+  const goNext = () => {
+    if (navMode === 'week') {
+      props.onNextWeek?.();
+      return;
+    }
     if (!canGoNextMonth(from)) return;
     const next = shiftMonthRange(from, 1);
     onApply(next.from, next.to);
   };
+
+  const canGoNext =
+    navMode === 'week' && props.weekFocus && props.weekStart
+      ? canGoNextWeek(props.weekFocus, to, props.weekStart)
+      : canGoNextMonth(from);
+
+  const prevLabel = navMode === 'week' ? 'Previous week' : 'Previous month';
+  const nextLabel = navMode === 'week' ? 'Next week' : 'Next month';
+  const todayDisabled = loading || (navMode === 'week' ? onCurrentWeek : onCurrentMonth);
 
   return (
     <div className="range-bar range-bar-header">
@@ -128,9 +159,9 @@ export function RangeBar({ from, to, loading, onApply, onGoToday }: Props) {
           <Button
             variant="icon"
             size="sm"
-            onClick={goPrevMonth}
+            onClick={goPrev}
             disabled={loading}
-            aria-label="Previous month"
+            aria-label={prevLabel}
           >
             <ChevronLeft />
           </Button>
@@ -214,9 +245,9 @@ export function RangeBar({ from, to, loading, onApply, onGoToday }: Props) {
           <Button
             variant="icon"
             size="sm"
-            onClick={goNextMonth}
-            disabled={loading || !canGoNextMonth(from)}
-            aria-label="Next month"
+            onClick={goNext}
+            disabled={loading || !canGoNext}
+            aria-label={nextLabel}
           >
             <ChevronRight />
           </Button>
@@ -227,7 +258,7 @@ export function RangeBar({ from, to, loading, onApply, onGoToday }: Props) {
 
       <Button
         variant="secondary"
-        disabled={loading || onCurrentMonth}
+        disabled={todayDisabled}
         aria-label="Go to today"
         onClick={onGoToday}
       >

@@ -1,5 +1,5 @@
 import type { DayBucket } from '../api';
-import { formatDuration } from '../api';
+import { formatDuration, MAX_RANGE_DAYS, spanDays } from '../api';
 import type { WeekStart } from '../settings';
 
 export type CalendarLayout = 'week' | 'month';
@@ -187,6 +187,13 @@ export function isCurrentWeek(focusStartIso: string, weekStart: WeekStart = 'sun
   return weekContaining(today, weekStart).from === focusStartIso;
 }
 
+/** Current calendar week, capped at today (hybrid week-mode default). */
+export function currentWeekRange(weekStart: WeekStart = 'sunday'): { from: string; to: string } {
+  const today = toIso(new Date());
+  const { from, to } = weekContaining(today, weekStart);
+  return { from, to: to > today ? today : to };
+}
+
 export function weekLabelParts(
   anchorIso: string,
   weekStart: WeekStart = 'sunday',
@@ -206,6 +213,82 @@ export function weekLabelParts(
 export function weekLabel(anchorIso: string, weekStart: WeekStart = 'sunday'): string {
   const { year, range } = weekLabelParts(anchorIso, weekStart);
   return year.includes('–') ? `${range} (${year})` : `${range} ${year}`;
+}
+
+/** Keep focus when still in range; otherwise snap to the last week that fits. */
+export function clampWeekFocusToRange(
+  focusIso: string,
+  rangeFrom: string,
+  rangeTo: string,
+  weekStart: WeekStart = 'sunday',
+): string {
+  const focusStart = weekContaining(focusIso, weekStart).from;
+  const weekStarts = weekStartsInRange(rangeFrom, rangeTo, weekStart);
+  if (weekStarts.includes(focusStart)) return focusStart;
+  if (weekStarts.length === 0) return weekContaining(rangeFrom, weekStart).from;
+  return weekStarts[weekStarts.length - 1];
+}
+
+export function canGoNextWeek(
+  focusIso: string,
+  rangeTo: string,
+  weekStart: WeekStart = 'sunday',
+): boolean {
+  if (isCurrentWeek(focusIso, weekStart)) return false;
+  const focusStart = weekContaining(focusIso, weekStart).from;
+  const nextStart = shiftWeekAnchor(focusStart, 1);
+  const lastStart = weekContaining(rangeTo, weekStart).from;
+  return nextStart <= lastStart;
+}
+
+/** Month → week: preserve range when it fits API limits; otherwise clip around the focus week. */
+export function clipRangeToMaxDaysCenteredOn(
+  from: string,
+  to: string,
+  focusIso: string,
+  maxDays = MAX_RANGE_DAYS,
+): { from: string; to: string } {
+  if (spanDays(from, to) <= maxDays) return { from, to };
+
+  const today = toIso(new Date());
+  const before = Math.floor((maxDays - 1) / 2);
+  let newFrom = addDaysIso(focusIso, -before);
+  let newTo = addDaysIso(focusIso, maxDays - 1 - before);
+
+  if (newFrom < from) {
+    newFrom = from;
+    newTo = addDaysIso(from, maxDays - 1);
+  }
+  if (newTo > to) {
+    newTo = to;
+    newFrom = addDaysIso(to, -(maxDays - 1));
+  }
+  if (newTo > today) newTo = today;
+  if (newFrom > newTo) newFrom = newTo;
+
+  return { from: newFrom, to: newTo };
+}
+
+export function weekFocusForLayoutSwitch(
+  rangeFrom: string,
+  rangeTo: string,
+  weekStart: WeekStart = 'sunday',
+): string {
+  const today = toIso(new Date());
+  if (today >= rangeFrom && today <= rangeTo) {
+    return weekContaining(today, weekStart).from;
+  }
+  return weekContaining(rangeFrom, weekStart).from;
+}
+
+/** Month → week: keep the active range when possible; clip only when above API limits. */
+export function weekRangeForMonthSwitch(
+  from: string,
+  to: string,
+  focusIso: string,
+  maxDays = MAX_RANGE_DAYS,
+): { from: string; to: string } {
+  return clipRangeToMaxDaysCenteredOn(from, to, focusIso, maxDays);
 }
 
 export function readStoredLayout(): CalendarLayout {

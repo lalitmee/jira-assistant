@@ -14,7 +14,6 @@ import {
 import { Header } from './components/Header';
 import { Legend } from './components/Legend';
 import { RangeBar } from './components/RangeBar';
-import { WeekBar } from './components/WeekBar';
 import { LayoutSwitcher } from './components/LayoutSwitcher';
 import { MonthView, WeekView } from './components/CalendarViews';
 import { DayDrawer } from './components/DayDrawer';
@@ -22,13 +21,15 @@ import { SettingsPage } from './components/SettingsPage';
 import { Button } from './components/ui/Button';
 import {
   addDaysIso,
+  clampWeekFocusToRange,
+  currentWeekRange,
   earlierWeekPrefetchChunk,
-  isCurrentWeek,
   monthStartForWeek,
   parseLocal,
   shiftWeekAnchor,
   weekContaining,
-  weekWindowForFocus,
+  weekFocusForLayoutSwitch,
+  weekRangeForMonthSwitch,
   shouldPrefetchEarlierWeeks,
   WEEK_PREFETCH_WEEKS,
   type CalendarLayout,
@@ -139,10 +140,10 @@ export function App() {
         setMe(profile);
         if (!profile) return;
         if (layout === 'week') {
+          const range = currentWeekRange(weekStart);
           const focus = weekContaining(toIsoDate(new Date()), weekStart).from;
           setWeekFocusAnchor(focus);
-          const win = weekWindowForFocus(focus, weekStart);
-          void load(win.from, win.to);
+          void load(range.from, range.to);
           return;
         }
         void load(from, to);
@@ -152,19 +153,6 @@ export function App() {
     // Initial auth check and first worklog load only
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const goToToday = useCallback(() => {
-    if (layout === 'week') {
-      const today = toIsoDate(new Date());
-      const focus = weekContaining(today, weekStart).from;
-      setWeekFocusAnchor(focus);
-      const win = weekWindowForFocus(focus, weekStart);
-      void load(win.from, win.to);
-      return;
-    }
-    const range = currentMonthRange();
-    void load(range.from, range.to);
-  }, [layout, load, weekStart]);
 
   const focusWeek = useCallback(
     (sun: string) => {
@@ -178,6 +166,45 @@ export function App() {
     },
     [from, weekStart],
   );
+
+  const applyWeekRange = useCallback(
+    (newFrom: string, newTo: string, focusOverride?: string) => {
+      const nextFocus = clampWeekFocusToRange(
+        focusOverride ?? weekFocus,
+        newFrom,
+        newTo,
+        weekStart,
+      );
+      setWeekFocusAnchor(nextFocus);
+
+      const cached = dataRef.current;
+      if (cached && cached.from <= newTo && cached.to >= newFrom) {
+        setFrom(newFrom);
+        setTo(newTo);
+        if (newFrom < cached.from) {
+          void prefetchRange(newFrom, addDaysIso(cached.from, -1));
+        }
+        if (newTo > cached.to) {
+          void prefetchRange(addDaysIso(cached.to, 1), newTo);
+        }
+        return;
+      }
+
+      void load(newFrom, newTo);
+    },
+    [weekFocus, weekStart, load, prefetchRange],
+  );
+
+  const goToToday = useCallback(() => {
+    if (layout === 'week') {
+      const range = currentWeekRange(weekStart);
+      const focus = weekContaining(toIsoDate(new Date()), weekStart).from;
+      applyWeekRange(range.from, range.to, focus);
+      return;
+    }
+    const range = currentMonthRange();
+    void load(range.from, range.to);
+  }, [layout, load, weekStart, applyWeekRange]);
 
   useEffect(() => {
     if (layout !== 'week' || !data) return;
@@ -226,31 +253,25 @@ export function App() {
     updateSettings({ layout: next });
 
     if (next === 'week') {
-      const today = toIsoDate(new Date());
-      const focus =
-        today >= from && today <= to
-          ? weekContaining(today, weekStart).from
-          : weekContaining(from, weekStart).from;
-      const win = weekWindowForFocus(focus, weekStart);
-      const clamped = win.weekStarts.includes(focus)
-        ? focus
-        : (win.weekStarts[win.weekStarts.length - 1] ?? focus);
-      setWeekFocusAnchor(clamped);
-      setFrom(win.from);
-      setTo(win.to);
+      const focus = weekFocusForLayoutSwitch(from, to, weekStart);
+      const { from: rangeFrom, to: rangeTo } = weekRangeForMonthSwitch(from, to, focus);
+      const clampedFocus = clampWeekFocusToRange(focus, rangeFrom, rangeTo, weekStart);
+      setWeekFocusAnchor(clampedFocus);
+      setFrom(rangeFrom);
+      setTo(rangeTo);
 
       const cached = data;
-      if (cached && cached.from <= win.to && cached.to >= win.from) {
-        if (win.from < cached.from) {
-          void prefetchRange(win.from, addDaysIso(cached.from, -1));
+      if (cached && cached.from <= rangeTo && cached.to >= rangeFrom) {
+        if (rangeFrom < cached.from) {
+          void prefetchRange(rangeFrom, addDaysIso(cached.from, -1));
         }
-        if (win.to > cached.to) {
-          void prefetchRange(addDaysIso(cached.to, 1), win.to);
+        if (rangeTo > cached.to) {
+          void prefetchRange(addDaysIso(cached.to, 1), rangeTo);
         }
         return;
       }
 
-      void load(win.from, win.to);
+      void load(rangeFrom, rangeTo);
       return;
     }
 
@@ -325,26 +346,29 @@ export function App() {
         onLogout={onLogout}
         onOpenSettings={() => setView('settings')}
         controls={
-          layout === 'month' ? (
+          layout === 'week' ? (
+            <RangeBar
+              navMode="week"
+              from={from}
+              to={to}
+              loading={loading}
+              onApply={applyWeekRange}
+              onGoToday={() => goToToday()}
+              weekFocus={weekFocus}
+              weekStart={weekStart}
+              onPrevWeek={() =>
+                focusWeek(shiftWeekAnchor(weekContaining(weekFocus, weekStart).from, -1))
+              }
+              onNextWeek={() =>
+                focusWeek(shiftWeekAnchor(weekContaining(weekFocus, weekStart).from, 1))
+              }
+            />
+          ) : (
             <RangeBar
               from={from}
               to={to}
               loading={loading}
               onApply={(f, t) => void load(f, t)}
-              onGoToday={() => goToToday()}
-            />
-          ) : (
-            <WeekBar
-              focusSunday={weekFocus}
-              weekStart={weekStart}
-              loading={loading}
-              canNext={!isCurrentWeek(weekFocus, weekStart)}
-              onPrev={() =>
-                focusWeek(shiftWeekAnchor(weekContaining(weekFocus, weekStart).from, -1))
-              }
-              onNext={() =>
-                focusWeek(shiftWeekAnchor(weekContaining(weekFocus, weekStart).from, 1))
-              }
               onGoToday={() => goToToday()}
             />
           )
