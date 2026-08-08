@@ -351,12 +351,20 @@ export function App() {
 
   const displayTotalSeconds = useMemo(() => {
     if (!data) return 0;
-    if (layout === 'month') return data.totalSeconds;
+    if (layout === 'month') {
+      let sum = 0;
+      let cur = from;
+      while (cur <= to) {
+        sum += data.days[cur]?.totalSeconds ?? 0;
+        cur = addDaysIso(cur, 1);
+      }
+      return sum;
+    }
     const dates = weeksOnWindow(weekFocus, weekStart, weekWindowWeeks).flatMap((sun) =>
       weekContaining(sun, weekStart).dates,
     );
     return dates.reduce((sum, iso) => sum + (data.days[iso]?.totalSeconds ?? 0), 0);
-  }, [data, layout, weekFocus, weekStart, weekWindowWeeks]);
+  }, [data, layout, from, to, weekFocus, weekStart, weekWindowWeeks]);
 
   const onLogout = async () => {
     await logout();
@@ -532,7 +540,7 @@ export function App() {
           />
         )}
 
-        {!calendarLoading && data && data.totalSeconds === 0 ? (
+        {!calendarLoading && data && displayTotalSeconds === 0 ? (
           <p className="empty">No worklogs in this range.</p>
         ) : null}
       </main>
