@@ -10,12 +10,11 @@ type Props = {
   me: Me | null;
   onLogout: () => void;
   controls?: ReactNode;
-  legend?: ReactNode;
   onOpenSettings?: () => void;
   onBack?: () => void;
 };
 
-export function Header({ me, onLogout, controls, legend, onOpenSettings, onBack }: Props) {
+export function Header({ me, onLogout, controls, onOpenSettings, onBack }: Props) {
   return (
     <header className="topbar">
       <div className="brand">
@@ -41,7 +40,6 @@ export function Header({ me, onLogout, controls, legend, onOpenSettings, onBack 
       {me && !onBack ? <div className="topbar-controls">{controls}</div> : null}
 
       <div className="user-meta">
-        {legend ? <div className="topbar-legend">{legend}</div> : null}
         {me ? (
           <UserMenu me={me} onLogout={onLogout} onOpenSettings={onOpenSettings} />
         ) : (

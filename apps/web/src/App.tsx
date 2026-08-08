@@ -4,7 +4,6 @@ import {
   defaultRange,
   fetchMe,
   fetchWorklogs,
-  formatDuration,
   logout,
   monthRange,
   toIsoDate,
@@ -242,7 +241,6 @@ export function App() {
             />
           ) : null
         }
-        legend={legend}
       />
       <main className="main">
         {error ? <p className="error">{error}</p> : null}

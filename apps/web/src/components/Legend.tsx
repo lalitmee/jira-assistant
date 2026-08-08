@@ -30,13 +30,20 @@ export function Legend({ showLegend, loading, totalSeconds }: Props) {
           <Divider orientation="vertical" legend />
         </>
       ) : null}
-      <span className="legend-item legend-total">
-        {loading ? (
-          'Loading…'
+      <span
+        className="legend-item legend-total"
+        aria-busy={loading || undefined}
+        aria-live="polite"
+      >
+        Total:{' '}
+        {loading && totalSeconds == null ? (
+          <span className="legend-total-placeholder" aria-hidden="true">
+            —
+          </span>
         ) : totalSeconds != null ? (
-          <>
-            Total <strong>{formatDuration(totalSeconds)}</strong>
-          </>
+          <strong className={loading ? 'legend-total-stale' : undefined}>
+            {formatDuration(totalSeconds)}
+          </strong>
         ) : null}
       </span>
     </div>
