@@ -3,7 +3,6 @@ import styles from './RangeTrigger.module.css';
 type Props = {
   label: string;
   open: boolean;
-  labelledBy?: string;
   onClick: () => void;
   /** Tighter typography for the header range bar. */
   compact?: boolean;
@@ -11,15 +10,14 @@ type Props = {
   parts?: { year: string; range: string };
 };
 
-export function RangeTrigger({ label, open, labelledBy, onClick, compact = false, parts }: Props) {
+export function RangeTrigger({ label, open, onClick, compact = false, parts }: Props) {
   return (
     <button
       type="button"
       className={compact ? styles.headerTrigger : styles.trigger}
       onClick={onClick}
       aria-expanded={open}
-      aria-labelledby={labelledBy}
-      aria-label={parts ? `${parts.range}, ${parts.year}` : undefined}
+      aria-label={parts ? `Date range, ${parts.range}, ${parts.year}` : label}
     >
       {compact && parts ? (
         <span className="week-nav-label-stack">

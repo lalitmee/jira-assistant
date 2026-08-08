@@ -544,17 +544,14 @@ a:hover {
   gap: 8px;
 }
 
-.range-trigger-wrap {
-  position: relative;
+.range-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.range-field-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  flex-shrink: 0;
+.range-trigger-wrap {
+  position: relative;
 }
 
 .range-backdrop {
@@ -1873,7 +1870,8 @@ a:hover {
   border-right: none;
 }
 
-[data-calendar-grid='true'] .month-view .card-row:not(.month-weekday-row),
+[data-calendar-grid='true'] .month-weekday-row,
+[data-calendar-grid='true'] .month-view .card-row,
 [data-calendar-grid='true'] .week-page .card-row {
   gap: 0;
   margin-bottom: 0;

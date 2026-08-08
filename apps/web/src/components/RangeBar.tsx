@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { DayPicker, type DateRange } from 'react-day-picker';
-import { format, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
 import {
   MAX_RANGE_DAYS,
   canGoNextMonth,
@@ -74,11 +74,6 @@ export function RangeBar({ from, to, loading, onApply, onGoToday }: Props) {
     return year.includes('–') ? `${range} (${year})` : `${range} ${year}`;
   }, [rangeParts]);
 
-  const monthNavParts = useMemo(() => {
-    const d = parseISO(from);
-    return { year: format(d, 'yyyy'), range: format(d, 'MMM') };
-  }, [from]);
-
   const draftFrom = draft?.from ? toIsoDate(draft.from) : '';
   const draftTo = draft?.to ? toIsoDate(draft.to) : draftFrom;
   const draftDays = draftFrom && draftTo ? spanDays(draftFrom, draftTo) : 0;
@@ -129,114 +124,103 @@ export function RangeBar({ from, to, loading, onApply, onGoToday }: Props) {
   return (
     <div className="range-bar range-bar-header">
       <div className="range-picker-wrap">
-        <span className="range-field-label" id="range-field-label">
-          Range
-        </span>
-        <div className="range-trigger-wrap">
-          <RangeTrigger
-            label={label}
-            parts={rangeParts}
-            open={open}
-            labelledBy="range-field-label"
-            compact
-            onClick={() => {
-              setDraft(toRange(from, to));
-              setPickerMonth(parseISO(from));
-              setOpen((v) => !v);
-            }}
-          />
-
-          {open ? (
-            <div className="range-popover" role="dialog" aria-label="Choose date range">
-            <div className="range-presets">
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={loading || pickerOnCurrentMonth}
-                onClick={goPickerToday}
-              >
-                Today
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={loading}
-                onClick={() => applyPreset('this-month')}
-              >
-                This month
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={loading}
-                onClick={() => applyPreset('last-month')}
-              >
-                Last month
-              </Button>
-            </div>
-            <DayPicker
-              mode="range"
-              animate
-              selected={draft}
-              onSelect={setDraft}
-              month={pickerMonth}
-              onMonthChange={setPickerMonth}
-              numberOfMonths={PICKER_MONTHS_SHOWN}
-              max={MAX_RANGE_DAYS}
-              min={1}
-              disabled={disableFutureDays}
-              endMonth={today}
-              weekStartsOn={0}
-              resetOnSelect
-              excludeDisabled
-              className="range-daypicker"
+        <div className="range-nav">
+          <Button
+            variant="icon"
+            size="sm"
+            onClick={goPrevMonth}
+            disabled={loading}
+            aria-label="Previous month"
+          >
+            <ChevronLeft />
+          </Button>
+          <div className="range-trigger-wrap">
+            <RangeTrigger
+              label={label}
+              parts={rangeParts}
+              open={open}
+              compact
+              onClick={() => {
+                setDraft(toRange(from, to));
+                setPickerMonth(parseISO(from));
+                setOpen((v) => !v);
+              }}
             />
-            <Divider orientation="horizontal" />
-            <div className="range-popover-footer">
-              <span className="hint">
-                {canApply
-                  ? `${draftDays} day${draftDays === 1 ? '' : 's'} selected (max ${MAX_RANGE_DAYS})`
-                  : `Pick a start and end day (max ${MAX_RANGE_DAYS} days). Same day = single day.`}
-              </span>
-              <div className="range-popover-actions">
-                <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
-                  Cancel
-                </Button>
-                <Button variant="primary" size="sm" disabled={!canApply || loading} onClick={apply}>
-                  {loading ? 'Loading…' : 'Apply'}
-                </Button>
+
+            {open ? (
+              <div className="range-popover" role="dialog" aria-label="Choose date range">
+                <div className="range-presets">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={loading || pickerOnCurrentMonth}
+                    onClick={goPickerToday}
+                  >
+                    Today
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={loading}
+                    onClick={() => applyPreset('this-month')}
+                  >
+                    This month
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={loading}
+                    onClick={() => applyPreset('last-month')}
+                  >
+                    Last month
+                  </Button>
+                </div>
+                <DayPicker
+                  mode="range"
+                  animate
+                  selected={draft}
+                  onSelect={setDraft}
+                  month={pickerMonth}
+                  onMonthChange={setPickerMonth}
+                  numberOfMonths={PICKER_MONTHS_SHOWN}
+                  max={MAX_RANGE_DAYS}
+                  min={1}
+                  disabled={disableFutureDays}
+                  endMonth={today}
+                  weekStartsOn={0}
+                  resetOnSelect
+                  excludeDisabled
+                  className="range-daypicker"
+                />
+                <Divider orientation="horizontal" />
+                <div className="range-popover-footer">
+                  <span className="hint">
+                    {canApply
+                      ? `${draftDays} day${draftDays === 1 ? '' : 's'} selected (max ${MAX_RANGE_DAYS})`
+                      : `Pick a start and end day (max ${MAX_RANGE_DAYS} days). Same day = single day.`}
+                  </span>
+                  <div className="range-popover-actions">
+                    <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button variant="primary" size="sm" disabled={!canApply || loading} onClick={apply}>
+                      {loading ? 'Loading…' : 'Apply'}
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : null}
           </div>
-          ) : null}
+          <Button
+            variant="icon"
+            size="sm"
+            onClick={goNextMonth}
+            disabled={loading || !canGoNextMonth(from)}
+            aria-label="Next month"
+          >
+            <ChevronRight />
+          </Button>
         </div>
-      </div>
-
-      <Divider orientation="vertical" />
-
-      <div className="month-nav week-nav">
-        <Button
-          variant="icon"
-          size="sm"
-          onClick={goPrevMonth}
-          disabled={loading}
-          aria-label="Previous month"
-        >
-          <ChevronLeft />
-        </Button>
-        <div className="week-nav-label-stack" aria-live="polite">
-          <span className="week-nav-year">{monthNavParts.year}</span>
-          <span className="week-nav-range">{monthNavParts.range}</span>
-        </div>
-        <Button
-          variant="icon"
-          size="sm"
-          onClick={goNextMonth}
-          disabled={loading || !canGoNextMonth(from)}
-          aria-label="Next month"
-        >
-          <ChevronRight />
-        </Button>
       </div>
 
       <Divider orientation="vertical" />
