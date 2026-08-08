@@ -24,6 +24,8 @@
 
 .headerTrigger {
   composes: trigger;
+  width: 100%;
+  min-width: 0;
   height: 40px;
   gap: 8px;
 }
