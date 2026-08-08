@@ -138,8 +138,8 @@ a:hover {
 }
 
 .brand-logo {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 6px;
   flex-shrink: 0;
   display: block;
@@ -1854,43 +1854,71 @@ a:hover {
 
 [data-calendar-grid='false'] .card-cell .day-chip.hours-ok,
 [data-calendar-grid='false'] .card-cell .day-chip.is-today.hours-ok {
-  box-shadow: var(--shadow), inset 0 0 0 1px var(--ok);
+  box-shadow:
+    var(--shadow),
+    inset 0 0 0 1px var(--ok);
 }
 
 [data-calendar-grid='false'] .card-cell .day-chip.hours-bad,
 [data-calendar-grid='false'] .card-cell .day-chip.is-today.hours-bad {
-  box-shadow: var(--shadow), inset 0 0 0 1px var(--danger);
+  box-shadow:
+    var(--shadow),
+    inset 0 0 0 1px var(--danger);
 }
 
 [data-calendar-grid='false'] .card-cell .day-chip.hours-over,
 [data-calendar-grid='false'] .card-cell .day-chip.is-today.hours-over {
-  box-shadow: var(--shadow), inset 0 0 0 1px var(--warn);
+  box-shadow:
+    var(--shadow),
+    inset 0 0 0 1px var(--warn);
 }
 
 [data-calendar-grid='false'] .card-cell .day-chip.weekend.disabled {
   box-shadow: none;
 }
 
-[data-calendar-grid='false'] .card-cell:hover .day-chip:not(.future):not(.outside-month):not(.disabled) {
+[data-calendar-grid='false']
+  .card-cell:hover
+  .day-chip:not(.future):not(.outside-month):not(.disabled) {
   box-shadow: var(--shadow-hover);
 }
 
-[data-calendar-grid='false'] .card-cell:hover .day-chip.hours-ok:not(.future):not(.outside-month):not(.disabled),
-[data-calendar-grid='false'] .card-cell:hover .day-chip.is-today.hours-ok:not(.outside-month):not(.disabled) {
-  box-shadow: var(--shadow-hover), inset 0 0 0 1px var(--ok);
+[data-calendar-grid='false']
+  .card-cell:hover
+  .day-chip.hours-ok:not(.future):not(.outside-month):not(.disabled),
+[data-calendar-grid='false']
+  .card-cell:hover
+  .day-chip.is-today.hours-ok:not(.outside-month):not(.disabled) {
+  box-shadow:
+    var(--shadow-hover),
+    inset 0 0 0 1px var(--ok);
 }
 
-[data-calendar-grid='false'] .card-cell:hover .day-chip.hours-bad:not(.future):not(.outside-month):not(.disabled),
-[data-calendar-grid='false'] .card-cell:hover .day-chip.is-today.hours-bad:not(.outside-month):not(.disabled) {
-  box-shadow: var(--shadow-hover), inset 0 0 0 1px var(--danger);
+[data-calendar-grid='false']
+  .card-cell:hover
+  .day-chip.hours-bad:not(.future):not(.outside-month):not(.disabled),
+[data-calendar-grid='false']
+  .card-cell:hover
+  .day-chip.is-today.hours-bad:not(.outside-month):not(.disabled) {
+  box-shadow:
+    var(--shadow-hover),
+    inset 0 0 0 1px var(--danger);
 }
 
-[data-calendar-grid='false'] .card-cell:hover .day-chip.hours-over:not(.future):not(.outside-month):not(.disabled),
-[data-calendar-grid='false'] .card-cell:hover .day-chip.is-today.hours-over:not(.outside-month):not(.disabled) {
-  box-shadow: var(--shadow-hover), inset 0 0 0 1px var(--warn);
+[data-calendar-grid='false']
+  .card-cell:hover
+  .day-chip.hours-over:not(.future):not(.outside-month):not(.disabled),
+[data-calendar-grid='false']
+  .card-cell:hover
+  .day-chip.is-today.hours-over:not(.outside-month):not(.disabled) {
+  box-shadow:
+    var(--shadow-hover),
+    inset 0 0 0 1px var(--warn);
 }
 
-[data-calendar-grid='false'] .card-cell:hover .day-chip.weekend:not(.future):not(.outside-month):not(.disabled) {
+[data-calendar-grid='false']
+  .card-cell:hover
+  .day-chip.weekend:not(.future):not(.outside-month):not(.disabled) {
   box-shadow: var(--shadow-hover);
   opacity: 0.9;
 }

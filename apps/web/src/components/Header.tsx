@@ -23,7 +23,7 @@ export function Header({ me, onLogout, controls, onOpenSettings, onBack }: Props
           </Button>
         ) : (
           <>
-            <img className="brand-logo" src="/worklog-auditor.png" alt="" width={28} height={28} />
+            <img className="brand-logo" src="/jira-assistant.png" alt="" width={32} height={32} />
             <h1>Worklog Auditor</h1>
           </>
         )}
