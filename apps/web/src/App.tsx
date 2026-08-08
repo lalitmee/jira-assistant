@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   currentMonthRange,
   defaultRange,
   fetchMe,
   fetchWorklogs,
   logout,
+  mergeWorklogsResponses,
   monthRange,
   toIsoDate,
   type Me,
@@ -19,11 +20,16 @@ import { DayDrawer } from './components/DayDrawer';
 import { SettingsPage } from './components/SettingsPage';
 import { Button } from './components/ui/Button';
 import {
+  addDaysIso,
+  earlierWeekPrefetchChunk,
   isCurrentWeek,
   monthStartForWeek,
   parseLocal,
+  shiftWeekAnchor,
   weekContaining,
   weekWindowForFocus,
+  shouldPrefetchEarlierWeeks,
+  WEEK_PREFETCH_WEEKS,
   type CalendarLayout,
 } from './components/DayChip';
 import { useSettings } from './SettingsContext';
@@ -65,6 +71,42 @@ export function App() {
   }
 
   const weekFocus = weekFocusAnchor;
+
+  const dataRef = useRef(data);
+  dataRef.current = data;
+  const prefetchInFlight = useRef(new Set<string>());
+
+  const mergeIntoCache = useCallback((result: WorklogsResponse) => {
+    setData((prev) => (prev ? mergeWorklogsResponses([prev, result]) : result));
+  }, []);
+
+  const prefetchRange = useCallback(
+    async (rangeFrom: string, rangeTo: string) => {
+      if (rangeFrom > rangeTo) return;
+
+      const cached = dataRef.current;
+      if (cached && cached.from <= rangeFrom && cached.to >= rangeTo) return;
+
+      const key = `${rangeFrom}|${rangeTo}`;
+      if (prefetchInFlight.current.has(key)) return;
+      prefetchInFlight.current.add(key);
+
+      try {
+        const result = await fetchWorklogs(rangeFrom, rangeTo);
+        mergeIntoCache(result);
+      } catch (err) {
+        const status = (err as { status?: number }).status;
+        if (status === 401) {
+          setMe(null);
+          setData(null);
+          setError('Session expired. Connect to Jira again.');
+        }
+      } finally {
+        prefetchInFlight.current.delete(key);
+      }
+    },
+    [mergeIntoCache],
+  );
 
   const load = useCallback(async (rangeFrom: string, rangeTo: string) => {
     setLoading(true);
@@ -123,6 +165,40 @@ export function App() {
     void load(range.from, range.to);
   }, [layout, load, weekStart]);
 
+  const focusWeek = useCallback(
+    (sun: string) => {
+      const focusStart = weekContaining(sun, weekStart).from;
+      setWeekFocusAnchor(focusStart);
+
+      const displayWeekStart = weekContaining(from, weekStart).from;
+      if (focusStart < displayWeekStart) {
+        setFrom(shiftWeekAnchor(displayWeekStart, -WEEK_PREFETCH_WEEKS));
+      }
+    },
+    [from, weekStart],
+  );
+
+  useEffect(() => {
+    if (layout !== 'week' || !data) return;
+
+    const loadedFrom = data.from;
+    const loadedWeekStart = weekContaining(loadedFrom, weekStart).from;
+    const chunk = earlierWeekPrefetchChunk(loadedFrom, weekStart);
+    if (!chunk) return;
+
+    const approachingEdge = shouldPrefetchEarlierWeeks(
+      weekFocus,
+      loadedFrom,
+      data.to,
+      weekStart,
+    );
+    const focusBeforeLoaded = weekFocus < loadedWeekStart;
+    if (!approachingEdge && !focusBeforeLoaded) return;
+
+    if (from > chunk.from) setFrom(chunk.from);
+    void prefetchRange(chunk.from, chunk.to);
+  }, [layout, data, weekFocus, weekStart, from, prefetchRange]);
+
   const displayTotalSeconds = useMemo(() => {
     if (!data) return 0;
     if (layout === 'month') return data.totalSeconds;
@@ -159,6 +235,20 @@ export function App() {
         ? focus
         : (win.weekStarts[win.weekStarts.length - 1] ?? focus);
       setWeekFocusAnchor(clamped);
+      setFrom(win.from);
+      setTo(win.to);
+
+      const cached = data;
+      if (cached && cached.from <= win.to && cached.to >= win.from) {
+        if (win.from < cached.from) {
+          void prefetchRange(win.from, addDaysIso(cached.from, -1));
+        }
+        if (win.to > cached.to) {
+          void prefetchRange(addDaysIso(cached.to, 1), win.to);
+        }
+        return;
+      }
+
       void load(win.from, win.to);
       return;
     }
@@ -204,6 +294,9 @@ export function App() {
 
   const rangeFrom = data?.from ?? from;
   const rangeTo = data?.to ?? to;
+  const weekDisplayFrom = layout === 'week' ? from : rangeFrom;
+  const weekDisplayTo = layout === 'week' ? to : rangeTo;
+  const weekBlockingLoad = loading && !data;
 
   const legend = (
     <Legend
@@ -265,16 +358,16 @@ export function App() {
         ) : (
           <WeekView
             focusSunday={weekFocus}
-            rangeFrom={rangeFrom}
-            rangeTo={rangeTo}
+            rangeFrom={weekDisplayFrom}
+            rangeTo={weekDisplayTo}
             days={data?.days ?? {}}
             selected={selected}
-            loading={loading}
+            loading={weekBlockingLoad}
             weekStart={weekStart}
             showFutureDays={showFutureDays}
             weekSwipeEnabled={weekSwipeEnabled}
             onSelect={openDay}
-            onFocusWeek={setWeekFocusAnchor}
+            onFocusWeek={focusWeek}
             onGoToday={() => goToToday()}
             isOnCurrentWeek={isCurrentWeek(weekFocus, weekStart)}
           />

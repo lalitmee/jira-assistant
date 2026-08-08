@@ -81,6 +81,58 @@ export function shiftWeekAnchor(anchorIso: string, deltaWeeks: number): string {
   return toIso(d);
 }
 
+export function weekStartsInRange(from: string, to: string, weekStart: WeekStart): string[] {
+  const start = weekContaining(from, weekStart).from;
+  const end = weekContaining(to, weekStart).from;
+  const out: string[] = [];
+  let sun = start;
+  while (sun <= end) {
+    out.push(sun);
+    sun = shiftWeekAnchor(sun, 1);
+  }
+  return out.length > 0 ? out : [start];
+}
+
+export function weekFocusIndexInRange(
+  focusIso: string,
+  rangeFrom: string,
+  rangeTo: string,
+  weekStart: WeekStart,
+): number {
+  const focusStart = weekContaining(focusIso, weekStart).from;
+  return weekStartsInRange(rangeFrom, rangeTo, weekStart).indexOf(focusStart);
+}
+
+export const WEEK_PREFETCH_EDGE_WEEKS = 2;
+export const WEEK_PREFETCH_WEEKS = 12;
+
+export function shouldPrefetchEarlierWeeks(
+  focusIso: string,
+  rangeFrom: string,
+  rangeTo: string,
+  weekStart: WeekStart,
+  edgeWeeks = WEEK_PREFETCH_EDGE_WEEKS,
+): boolean {
+  const idx = weekFocusIndexInRange(focusIso, rangeFrom, rangeTo, weekStart);
+  return idx >= 0 && idx <= edgeWeeks;
+}
+
+export function extendRangeBackward(rangeFrom: string, weeks = WEEK_WINDOW_WEEKS): string {
+  return shiftWeekAnchor(rangeFrom, -weeks);
+}
+
+/** One API-safe chunk (≤84 days) to load immediately before the earliest loaded week. */
+export function earlierWeekPrefetchChunk(
+  loadedRangeFrom: string,
+  weekStart: WeekStart = 'sunday',
+): { from: string; to: string } | null {
+  const loadedWeekStart = weekContaining(loadedRangeFrom, weekStart).from;
+  const chunkFrom = shiftWeekAnchor(loadedWeekStart, -WEEK_PREFETCH_WEEKS);
+  const chunkTo = addDaysIso(loadedWeekStart, -1);
+  if (chunkFrom > chunkTo) return null;
+  return { from: chunkFrom, to: chunkTo };
+}
+
 export function addDaysIso(iso: string, days: number): string {
   const d = parseLocal(iso);
   d.setDate(d.getDate() + days);

@@ -59,16 +59,6 @@ export async function fetchMe(): Promise<Me | null> {
   return parseJson<Me>(res);
 }
 
-export async function fetchWorklogs(from: string, to: string): Promise<WorklogsResponse> {
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const params = new URLSearchParams({ from, to, tz });
-  const res = await fetch(`/api/worklogs?${params}`, {
-    credentials: 'include',
-    headers: { 'X-Timezone': tz },
-  });
-  return parseJson<WorklogsResponse>(res);
-}
-
 export async function logout(): Promise<void> {
   await fetch('/api/logout', { method: 'POST', credentials: 'include' });
 }
@@ -143,3 +133,73 @@ export function spanDays(from: string, to: string): number {
 }
 
 export const MAX_RANGE_DAYS = 93;
+
+function addDays(from: string, days: number): string {
+  const d = new Date(`${from}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return toIsoDate(d);
+}
+
+/** Split an inclusive range into API-sized chunks (max 93 days each). */
+export function splitDateRange(
+  from: string,
+  to: string,
+  maxDays = MAX_RANGE_DAYS,
+): Array<{ from: string; to: string }> {
+  if (spanDays(from, to) <= maxDays) return [{ from, to }];
+
+  const chunks: Array<{ from: string; to: string }> = [];
+  let curFrom = from;
+  while (curFrom <= to) {
+    const chunkTo = addDays(curFrom, maxDays - 1);
+    const boundedTo = chunkTo > to ? to : chunkTo;
+    chunks.push({ from: curFrom, to: boundedTo });
+    curFrom = addDays(boundedTo, 1);
+  }
+  return chunks;
+}
+
+export function mergeWorklogsResponses(responses: WorklogsResponse[]): WorklogsResponse {
+  if (responses.length === 0) {
+    return { from: '', to: '', totalSeconds: 0, days: {} };
+  }
+  if (responses.length === 1) return responses[0];
+
+  let from = responses[0].from;
+  let to = responses[0].to;
+  const days: Record<string, DayBucket> = {};
+
+  for (const response of responses) {
+    if (response.from < from) from = response.from;
+    if (response.to > to) to = response.to;
+    for (const [iso, bucket] of Object.entries(response.days)) {
+      days[iso] = bucket;
+    }
+  }
+
+  let totalSeconds = 0;
+  for (const bucket of Object.values(days)) {
+    totalSeconds += bucket.totalSeconds;
+  }
+
+  return { from, to, totalSeconds, days };
+}
+
+async function fetchWorklogsSingle(from: string, to: string): Promise<WorklogsResponse> {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const params = new URLSearchParams({ from, to, tz });
+  const res = await fetch(`/api/worklogs?${params}`, {
+    credentials: 'include',
+    headers: { 'X-Timezone': tz },
+  });
+  return parseJson<WorklogsResponse>(res);
+}
+
+export async function fetchWorklogs(from: string, to: string): Promise<WorklogsResponse> {
+  const chunks = splitDateRange(from, to);
+  if (chunks.length === 1) return fetchWorklogsSingle(chunks[0].from, chunks[0].to);
+  const results = await Promise.all(
+    chunks.map((chunk) => fetchWorklogsSingle(chunk.from, chunk.to)),
+  );
+  return mergeWorklogsResponses(results);
+}

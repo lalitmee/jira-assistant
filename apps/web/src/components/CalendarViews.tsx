@@ -24,6 +24,7 @@ import {
   weekContaining,
   weekLabel,
   weekStartOffset,
+  weekStartsInRange,
   weekdayLabels,
 } from './DayChip';
 
@@ -35,18 +36,6 @@ const WEEK_FLING_VELOCITY_PX_MS = 0.5;
 const WEEK_DRAG_DEADZONE_PX = 8;
 /** Page slide duration when committing via buttons or swipe release. */
 const WEEK_PAGE_TRANSITION_MS = 320;
-
-function weekStartsInRange(from: string, to: string, weekStart: WeekStart): string[] {
-  const start = weekContaining(from, weekStart).from;
-  const end = weekContaining(to, weekStart).from;
-  const out: string[] = [];
-  let sun = start;
-  while (sun <= end) {
-    out.push(sun);
-    sun = shiftWeekAnchor(sun, 1);
-  }
-  return out.length > 0 ? out : [start];
-}
 
 function focusIndex(weekStarts: string[], focusSunday: string): number {
   const idx = weekStarts.indexOf(focusSunday);
@@ -138,8 +127,14 @@ export function WeekView({
   }, [index]);
 
   const maxIndex = Math.max(0, weekStarts.length - 1);
-  const canPrev = index > 0;
+  const canPrev = true;
   const canNext = index < maxIndex;
+
+  const focusEarlierWeek = useCallback(() => {
+    const first = weekStarts[0];
+    if (!first) return;
+    onFocusWeek(shiftWeekAnchor(first, -1));
+  }, [onFocusWeek, weekStarts]);
 
   const commitWeek = useCallback(
     (nextIndex: number) => {
@@ -163,9 +158,14 @@ export function WeekView({
   const goToWeek = useCallback(
     (nextIndex: number) => {
       if (dragRef.current?.dragging) return;
+      if (nextIndex < 0) {
+        focusEarlierWeek();
+        return;
+      }
+      if (nextIndex > maxIndex) return;
       commitWeek(nextIndex);
     },
-    [commitWeek],
+    [commitWeek, focusEarlierWeek, maxIndex],
   );
 
   useLayoutEffect(() => {
@@ -280,9 +280,16 @@ export function WeekView({
     }
 
     if (delta !== 0) {
-      const next = clampIndex(indexRef.current + delta, weekStarts.length);
-      if (next !== indexRef.current) {
-        commitWeek(next);
+      const next = indexRef.current + delta;
+      if (next < 0) {
+        setDragOffset(0);
+        setAnimating(true);
+        focusEarlierWeek();
+        return;
+      }
+      const clamped = clampIndex(next, weekStarts.length);
+      if (clamped !== indexRef.current) {
+        commitWeek(clamped);
         return;
       }
     }
@@ -482,15 +489,13 @@ export function MonthView({
       ) : null}
 
       <div className="month-view" role="grid" aria-label="Month calendar">
-        {settings.calendarGrid ? (
-          <div className="card-row month-weekday-row">
-            {weekdays.map((d) => (
-              <div key={d} className="month-weekday">
-                {d}
-              </div>
-            ))}
-          </div>
-        ) : null}
+        <div className="card-row month-weekday-row" role="row">
+          {weekdays.map((d) => (
+            <div key={d} className="month-weekday" role="columnheader">
+              {d}
+            </div>
+          ))}
+        </div>
         {rows.map((row) => (
           <div className="card-row" key={row[0].iso} role="row">
             {row.map((cell) => {
@@ -506,7 +511,7 @@ export function MonthView({
                     selected={selected === cell.iso}
                     outOfRange={outOfRange}
                     variant={chipVariant}
-                    hideWeekday={settings.calendarGrid}
+                    hideWeekday
                     showFutureDays={showFutureDays}
                     onSelect={onSelect}
                   />
