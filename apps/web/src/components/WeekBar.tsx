@@ -28,7 +28,7 @@ export function WeekBar({
 
   return (
     <div className="range-bar range-bar-header">
-      <div className="month-nav week-nav">
+      <div className="range-nav week-nav">
         <Button
           variant="icon"
           size="sm"
