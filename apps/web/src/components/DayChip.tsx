@@ -1,6 +1,6 @@
 import type { DayBucket } from '../api';
 import { formatDuration, MAX_RANGE_DAYS, spanDays } from '../api';
-import type { WeekStart } from '../settings';
+import type { WeekStart, WeekWindowWeeks } from '../settings';
 
 export type CalendarLayout = 'week' | 'month';
 
@@ -187,11 +187,113 @@ export function isCurrentWeek(focusStartIso: string, weekStart: WeekStart = 'sun
   return weekContaining(today, weekStart).from === focusStartIso;
 }
 
-/** Current calendar week, capped at today (hybrid week-mode default). */
-export function currentWeekRange(weekStart: WeekStart = 'sunday'): { from: string; to: string } {
+/** Week anchors shown for a window starting at `windowStartIso`. */
+export function weeksOnWindow(
+  windowStartIso: string,
+  weekStart: WeekStart,
+  windowWeeks: WeekWindowWeeks,
+): string[] {
+  const start = weekContaining(windowStartIso, weekStart).from;
+  if (windowWeeks === 1) return [start];
+  return [start, shiftWeekAnchor(start, 1)];
+}
+
+/** @deprecated Use weeksOnWindow(windowStart, weekStart, visibleWeeks). */
+export function visibleWeekStarts(
+  windowStartIso: string,
+  weekStart: WeekStart,
+  visibleWeeks: WeekWindowWeeks,
+): string[] {
+  return weeksOnWindow(windowStartIso, weekStart, visibleWeeks);
+}
+
+/** Carousel page keys for 2-week mode: non-overlapping pairs stepping by 2 weeks. */
+export function twoWeekWindowStartsInRange(
+  rangeFrom: string,
+  rangeTo: string,
+  weekStart: WeekStart,
+): string[] {
+  const first = weekContaining(rangeFrom, weekStart).from;
+  const last = weekContaining(rangeTo, weekStart).from;
+  const out: string[] = [];
+  let w = first;
+  while (w <= last) {
+    out.push(w);
+    w = shiftWeekAnchor(w, 2);
+  }
+  return out.length > 0 ? out : [first];
+}
+
+/** Default window start for week view (current week, or previous week when window is 2). */
+export function defaultWeekWindowStart(
+  weekStart: WeekStart = 'sunday',
+  windowWeeks: WeekWindowWeeks = 1,
+): string {
+  const currentStart = weekContaining(toIso(new Date()), weekStart).from;
+  return windowWeeks === 1 ? currentStart : shiftWeekAnchor(currentStart, -1);
+}
+
+/** True when the visible window is the default position (includes current week when window is 2). */
+export function isCurrentWeekWindow(
+  windowStartIso: string,
+  weekStart: WeekStart,
+  windowWeeks: WeekWindowWeeks,
+): boolean {
+  const start = weekContaining(windowStartIso, weekStart).from;
+  return start === defaultWeekWindowStart(weekStart, windowWeeks);
+}
+
+/** Shift carousel by one page (1 week in 1-week mode, 2 weeks in 2-week mode). */
+export function shiftWeekWindow(
+  windowStartIso: string,
+  weekStart: WeekStart,
+  pageDelta: number,
+  windowWeeks: WeekWindowWeeks,
+): string {
+  const start = weekContaining(windowStartIso, weekStart).from;
+  const step = windowWeeks === 2 ? 2 : 1;
+  return shiftWeekAnchor(start, pageDelta * step);
+}
+
+/** Inclusive bounds for all weeks currently shown in week view. */
+export function visibleWeekBounds(
+  windowStartIso: string,
+  weekStart: WeekStart,
+  visibleWeeks: WeekWindowWeeks,
+): { from: string; to: string } {
+  const starts = weeksOnWindow(windowStartIso, weekStart, visibleWeeks);
   const today = toIso(new Date());
-  const { from, to } = weekContaining(today, weekStart);
+  const { from } = weekContaining(starts[0], weekStart);
+  const { to } = weekContaining(starts[starts.length - 1], weekStart);
   return { from, to: to > today ? today : to };
+}
+
+/** Default week-mode range: current week, or previous + current when window is 2. */
+export function defaultWeekRange(
+  weekStart: WeekStart = 'sunday',
+  windowWeeks: WeekWindowWeeks = 1,
+): { from: string; to: string } {
+  const today = toIso(new Date());
+  const currentStart = weekContaining(today, weekStart).from;
+  const from =
+    windowWeeks === 1 ? currentStart : shiftWeekAnchor(currentStart, -(windowWeeks - 1));
+  const { to: weekEnd } = weekContaining(today, weekStart);
+  return { from, to: weekEnd > today ? today : weekEnd };
+}
+
+/** @deprecated Use defaultWeekRange(weekStart, 1) */
+export function currentWeekRange(weekStart: WeekStart = 'sunday'): { from: string; to: string } {
+  return defaultWeekRange(weekStart, 1);
+}
+
+/** Carousel window start when expanding backward before the loaded range. */
+export function weekWindowStartForFocus(
+  windowStartIso: string,
+  weekStart: WeekStart,
+  windowWeeks: WeekWindowWeeks,
+): string {
+  const start = weekContaining(windowStartIso, weekStart).from;
+  return shiftWeekAnchor(start, windowWeeks === 2 ? -2 : -1);
 }
 
 /** Inclusive bounds for the week containing `focusIso`, capped at today. */
@@ -204,6 +306,50 @@ export function focusedWeekBounds(
   return { from, to: to > today ? today : to };
 }
 
+export type LoadedSegment = { from: string; to: string };
+
+/** Merge a fetched interval into the list of contiguous loaded segments. */
+export function mergeLoadedSegment(
+  segments: LoadedSegment[],
+  from: string,
+  to: string,
+): LoadedSegment[] {
+  if (from > to) return segments;
+
+  const next = [...segments, { from, to }].sort((a, b) => a.from.localeCompare(b.from));
+  const merged: LoadedSegment[] = [];
+
+  for (const seg of next) {
+    const last = merged[merged.length - 1];
+    if (!last || seg.from > addDaysIso(last.to, 1)) {
+      merged.push({ ...seg });
+      continue;
+    }
+    if (seg.to > last.to) last.to = seg.to;
+  }
+
+  return merged;
+}
+
+/** True when every day in [from, to] lies inside one or more contiguous loaded segments. */
+export function isRangeCoveredBySegments(
+  segments: LoadedSegment[],
+  from: string,
+  to: string,
+): boolean {
+  if (from > to) return true;
+  if (segments.length === 0) return false;
+
+  let cursor = from;
+  while (cursor <= to) {
+    const seg = segments.find((s) => s.from <= cursor && s.to >= cursor);
+    if (!seg) return false;
+    cursor = addDaysIso(seg.to, 1);
+  }
+  return true;
+}
+
+/** @deprecated Prefer isRangeCoveredBySegments; merged cache bounds can span unfetched gaps. */
 export function isRangeCoveredByCache(
   cached: { from: string; to: string },
   from: string,
@@ -247,6 +393,27 @@ export function clampWeekFocusToRange(
   return weekStarts[weekStarts.length - 1];
 }
 
+/** Snap window start to a valid carousel page when range or mode changes. */
+export function clampWeekWindowStart(
+  windowStartIso: string,
+  rangeFrom: string,
+  rangeTo: string,
+  weekStart: WeekStart,
+  windowWeeks: WeekWindowWeeks,
+): string {
+  const start = weekContaining(windowStartIso, weekStart).from;
+  if (windowWeeks === 1) return clampWeekFocusToRange(start, rangeFrom, rangeTo, weekStart);
+
+  const pages = twoWeekWindowStartsInRange(rangeFrom, rangeTo, weekStart);
+  if (pages.includes(start)) return start;
+  if (pages.length === 0) return start;
+
+  for (let i = pages.length - 1; i >= 0; i--) {
+    if (pages[i] <= start) return pages[i];
+  }
+  return pages[0];
+}
+
 export function canGoNextWeek(
   focusIso: string,
   rangeTo: string,
@@ -257,6 +424,19 @@ export function canGoNextWeek(
   const nextStart = shiftWeekAnchor(focusStart, 1);
   const lastStart = weekContaining(rangeTo, weekStart).from;
   return nextStart <= lastStart;
+}
+
+export function canGoNextWeekWindow(
+  windowStartIso: string,
+  rangeTo: string,
+  weekStart: WeekStart,
+  windowWeeks: WeekWindowWeeks,
+): boolean {
+  if (windowWeeks === 1) return canGoNextWeek(windowStartIso, rangeTo, weekStart);
+  if (isCurrentWeekWindow(windowStartIso, weekStart, windowWeeks)) return false;
+  const nextWindow = shiftWeekAnchor(weekContaining(windowStartIso, weekStart).from, 2);
+  const lastStart = weekContaining(rangeTo, weekStart).from;
+  return nextWindow <= lastStart;
 }
 
 /** Month → week: preserve range when it fits API limits; otherwise clip around the focus week. */

@@ -27,6 +27,11 @@ const GROUP_BY_OPTIONS = [
   { value: 'chronological' as DrawerGroupBy, label: 'Chronological' },
 ];
 
+const WEEK_WINDOW_SEGMENT_OPTIONS = [
+  { value: '1', label: '1 week' },
+  { value: '2', label: '2 weeks' },
+] as const;
+
 export function SettingsPage() {
   const { settings, updateSettings, resetToDefaults } = useSettings();
 
@@ -81,6 +86,18 @@ export function SettingsPage() {
             aria-label="Week starts on"
             size="sm"
             onChange={(weekStart) => updateSettings({ weekStart })}
+          />
+        </SettingsRow>
+        <SettingsRow
+          label="Week window"
+          description="In week view, show one week per screen or two consecutive weeks that move together."
+        >
+          <SegmentedControl
+            value={settings.weekWindowWeeks === 2 ? '2' : '1'}
+            options={[...WEEK_WINDOW_SEGMENT_OPTIONS]}
+            aria-label="Week window"
+            size="sm"
+            onChange={(v) => updateSettings({ weekWindowWeeks: v === '2' ? 2 : 1 })}
           />
         </SettingsRow>
         <SettingsRow label="Future days" description="Show upcoming days on the calendar.">

@@ -16,13 +16,15 @@ import {
   parseLocal,
   shiftWeekAnchor,
   toIso,
+  twoWeekWindowStartsInRange,
+  weeksOnWindow,
   weekContaining,
   weekStartOffset,
   weekStartsInRange,
   weekdayLabels,
 } from './DayChip';
 
-import type { WeekStart } from '../settings';
+import type { WeekStart, WeekWindowWeeks } from '../settings';
 
 /** Fraction of page width required to commit a swipe to the neighbor week. */
 const WEEK_SWIPE_THRESHOLD = 0.4;
@@ -64,6 +66,7 @@ type WeekProps = {
   selected: string | null;
   loading?: boolean;
   weekStart: WeekStart;
+  visibleWeeks?: WeekWindowWeeks;
   showFutureDays: boolean;
   weekSwipeEnabled: boolean;
   onSelect: (iso: string) => void;
@@ -80,6 +83,105 @@ type DragState = {
   suppressClick: boolean;
 };
 
+function WeekRow({
+  sun,
+  rangeFrom,
+  rangeTo,
+  days,
+  selected,
+  weekStart,
+  showFutureDays,
+  onSelect,
+}: {
+  sun: string;
+  rangeFrom: string;
+  rangeTo: string;
+  days: Record<string, DayBucket>;
+  selected: string | null;
+  weekStart: WeekStart;
+  showFutureDays: boolean;
+  onSelect: (iso: string) => void;
+}) {
+  const { dates } = weekContaining(sun, weekStart);
+  return (
+    <div className="card-row">
+      {dates.map((iso) => {
+        const outOfRange = iso < rangeFrom || iso > rangeTo;
+        return (
+          <div key={iso} className="card-cell">
+            <DayChip
+              iso={iso}
+              bucket={days[iso]}
+              selected={selected === iso}
+              outOfRange={outOfRange}
+              hideWeekday
+              showFutureDays={showFutureDays}
+              onSelect={onSelect}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function WeekPage({
+  windowStart,
+  visibleWeeks,
+  rangeFrom,
+  rangeTo,
+  days,
+  selected,
+  weekStart,
+  showFutureDays,
+  onSelect,
+}: {
+  windowStart: string;
+  visibleWeeks: WeekWindowWeeks;
+  rangeFrom: string;
+  rangeTo: string;
+  days: Record<string, DayBucket>;
+  selected: string | null;
+  weekStart: WeekStart;
+  showFutureDays: boolean;
+  onSelect: (iso: string) => void;
+}) {
+  const weekAnchors = weeksOnWindow(windowStart, weekStart, visibleWeeks);
+
+  if (visibleWeeks === 1) {
+    return (
+      <WeekRow
+        sun={windowStart}
+        rangeFrom={rangeFrom}
+        rangeTo={rangeTo}
+        days={days}
+        selected={selected}
+        weekStart={weekStart}
+        showFutureDays={showFutureDays}
+        onSelect={onSelect}
+      />
+    );
+  }
+
+  return (
+    <div className="week-stack">
+      {weekAnchors.map((sun) => (
+        <WeekRow
+          key={sun}
+          sun={sun}
+          rangeFrom={rangeFrom}
+          rangeTo={rangeTo}
+          days={days}
+          selected={selected}
+          weekStart={weekStart}
+          showFutureDays={showFutureDays}
+          onSelect={onSelect}
+        />
+      ))}
+    </div>
+  );
+}
+
 export function WeekView({
   focusSunday,
   rangeFrom,
@@ -88,14 +190,50 @@ export function WeekView({
   selected,
   loading,
   weekStart,
+  visibleWeeks = 1,
+  showFutureDays,
+  weekSwipeEnabled,
+  onSelect,
+  onFocusWeek,
+}: WeekProps) {
+  return (
+    <WeekCarouselView
+      focusSunday={focusSunday}
+      rangeFrom={rangeFrom}
+      rangeTo={rangeTo}
+      days={days}
+      selected={selected}
+      loading={loading}
+      weekStart={weekStart}
+      visibleWeeks={visibleWeeks}
+      showFutureDays={showFutureDays}
+      weekSwipeEnabled={weekSwipeEnabled}
+      onSelect={onSelect}
+      onFocusWeek={onFocusWeek}
+    />
+  );
+}
+
+function WeekCarouselView({
+  focusSunday,
+  rangeFrom,
+  rangeTo,
+  days,
+  selected,
+  loading,
+  weekStart,
+  visibleWeeks = 1,
   showFutureDays,
   weekSwipeEnabled,
   onSelect,
   onFocusWeek,
 }: WeekProps) {
   const weekStarts = useMemo(
-    () => weekStartsInRange(rangeFrom, rangeTo, weekStart),
-    [rangeFrom, rangeTo, weekStart],
+    () =>
+      visibleWeeks === 2
+        ? twoWeekWindowStartsInRange(rangeFrom, rangeTo, weekStart)
+        : weekStartsInRange(rangeFrom, rangeTo, weekStart),
+    [rangeFrom, rangeTo, weekStart, visibleWeeks],
   );
   const viewportRef = useRef<HTMLDivElement>(null);
   const indexRef = useRef(0);
@@ -343,7 +481,7 @@ export function WeekView({
 
   return (
     <div
-      className={`week-view-wrap${loading ? ' is-loading' : ''}${ready ? '' : ' is-placing'}`}
+      className={`week-view-wrap${visibleWeeks === 2 ? ' week-view-wrap--dual' : ''}${loading ? ' is-loading' : ''}${ready ? '' : ' is-placing'}`}
       tabIndex={0}
       onKeyDown={onKeyDown}
       aria-label="Week view"
@@ -373,36 +511,26 @@ export function WeekView({
             style={trackStyle}
             onTransitionEnd={onTrackTransitionEnd}
           >
-            {weekStarts.map((sun) => {
-              const { dates } = weekContaining(sun, weekStart);
-              return (
-                <div
-                  key={sun}
-                  className="week-page"
-                  role="listitem"
-                  style={pageWidth > 0 ? { width: pageWidth } : undefined}
-                >
-                  <div className="card-row">
-                    {dates.map((iso) => {
-                      const outOfRange = iso < rangeFrom || iso > rangeTo;
-                      return (
-                        <div key={iso} className="card-cell">
-                          <DayChip
-                            iso={iso}
-                            bucket={days[iso]}
-                            selected={selected === iso}
-                            outOfRange={outOfRange}
-                            hideWeekday
-                            showFutureDays={showFutureDays}
-                            onSelect={onSelect}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+            {weekStarts.map((sun) => (
+              <div
+                key={sun}
+                className="week-page"
+                role="listitem"
+                style={pageWidth > 0 ? { width: pageWidth } : undefined}
+              >
+                <WeekPage
+                  windowStart={sun}
+                  visibleWeeks={visibleWeeks}
+                  rangeFrom={rangeFrom}
+                  rangeTo={rangeTo}
+                  days={days}
+                  selected={selected}
+                  weekStart={weekStart}
+                  showFutureDays={showFutureDays}
+                  onSelect={onSelect}
+                />
+              </div>
+            ))}
           </div>
         </div>
       </div>

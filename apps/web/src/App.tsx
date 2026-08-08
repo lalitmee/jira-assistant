@@ -6,8 +6,6 @@ import {
   fetchWorklogs,
   logout,
   mergeWorklogsResponses,
-  monthRange,
-  toIsoDate,
   type Me,
   type WorklogsResponse,
 } from './api';
@@ -21,19 +19,19 @@ import { SettingsPage } from './components/SettingsPage';
 import { Button } from './components/ui/Button';
 import {
   addDaysIso,
-  clampWeekFocusToRange,
-  currentWeekRange,
+  clampWeekWindowStart,
+  defaultWeekRange,
+  defaultWeekWindowStart,
   earlierWeekPrefetchChunk,
-  focusedWeekBounds,
-  isRangeCoveredByCache,
-  monthStartForWeek,
-  parseLocal,
-  shiftWeekAnchor,
+  isRangeCoveredBySegments,
+  mergeLoadedSegment,
+  shiftWeekWindow,
+  type LoadedSegment,
+  visibleWeekBounds,
+  weeksOnWindow,
   weekContaining,
-  weekFocusForLayoutSwitch,
-  weekRangeForMonthSwitch,
+  weekWindowStartForFocus,
   shouldPrefetchEarlierWeeks,
-  WEEK_PREFETCH_WEEKS,
   type CalendarLayout,
 } from './components/DayChip';
 import { useSettings } from './SettingsContext';
@@ -43,7 +41,7 @@ type AppView = 'calendar' | 'settings';
 export function App() {
   const { settings, updateSettings } = useSettings();
   const layout = settings.layout;
-  const { weekStart, showLegend, showFutureDays, weekSwipeEnabled } = settings;
+  const { weekStart, weekWindowWeeks, showLegend, showFutureDays, weekSwipeEnabled } = settings;
 
   const initial = useMemo(() => defaultRange(), []);
   const [view, setView] = useState<AppView>('calendar');
@@ -64,21 +62,34 @@ export function App() {
     }
     return null;
   });
-  const [weekFocusAnchor, setWeekFocusAnchor] = useState(
-    () => weekContaining(toIsoDate(new Date()), weekStart).from,
+  const [weekFocusAnchor, setWeekFocusAnchor] = useState(() =>
+    defaultWeekWindowStart(weekStart, weekWindowWeeks),
   );
+  const [loadedSegments, setLoadedSegments] = useState<LoadedSegment[]>([]);
   const [prevWeekStart, setPrevWeekStart] = useState(weekStart);
 
   if (weekStart !== prevWeekStart) {
     setPrevWeekStart(weekStart);
-    setWeekFocusAnchor((prev) => weekContaining(prev, weekStart).from);
+    setWeekFocusAnchor((prev) =>
+      weekWindowWeeks === 2
+        ? clampWeekWindowStart(prev, from, to, weekStart, 2)
+        : weekContaining(prev, weekStart).from,
+    );
   }
 
   const weekFocus = weekFocusAnchor;
 
   const dataRef = useRef(data);
   dataRef.current = data;
+  const loadedSegmentsRef = useRef(loadedSegments);
+  loadedSegmentsRef.current = loadedSegments;
   const prefetchInFlight = useRef(new Set<string>());
+  const loadGenerationRef = useRef(0);
+  const prevWeekWindowWeeksRef = useRef(weekWindowWeeks);
+
+  const recordLoadedRange = useCallback((rangeFrom: string, rangeTo: string) => {
+    setLoadedSegments((prev) => mergeLoadedSegment(prev, rangeFrom, rangeTo));
+  }, []);
 
   const mergeIntoCache = useCallback((result: WorklogsResponse) => {
     setData((prev) => (prev ? mergeWorklogsResponses([prev, result]) : result));
@@ -87,32 +98,36 @@ export function App() {
   const prefetchRange = useCallback(
     async (rangeFrom: string, rangeTo: string) => {
       if (rangeFrom > rangeTo) return;
-
-      const cached = dataRef.current;
-      if (cached && cached.from <= rangeFrom && cached.to >= rangeTo) return;
+      if (isRangeCoveredBySegments(loadedSegmentsRef.current, rangeFrom, rangeTo)) return;
 
       const key = `${rangeFrom}|${rangeTo}`;
       if (prefetchInFlight.current.has(key)) return;
       prefetchInFlight.current.add(key);
 
+      const generation = loadGenerationRef.current;
+
       try {
         const result = await fetchWorklogs(rangeFrom, rangeTo);
+        if (generation !== loadGenerationRef.current) return;
+        recordLoadedRange(rangeFrom, rangeTo);
         mergeIntoCache(result);
       } catch (err) {
         const status = (err as { status?: number }).status;
         if (status === 401) {
           setMe(null);
           setData(null);
+          setLoadedSegments([]);
           setError('Session expired. Connect to Jira again.');
         }
       } finally {
         prefetchInFlight.current.delete(key);
       }
     },
-    [mergeIntoCache],
+    [mergeIntoCache, recordLoadedRange],
   );
 
   const load = useCallback(async (rangeFrom: string, rangeTo: string) => {
+    const generation = ++loadGenerationRef.current;
     setLoading(true);
     setError(null);
     setFrom(rangeFrom);
@@ -121,12 +136,15 @@ export function App() {
     setSelected(null);
     try {
       const result = await fetchWorklogs(rangeFrom, rangeTo);
+      if (generation !== loadGenerationRef.current) return;
+      setLoadedSegments([{ from: rangeFrom, to: rangeTo }]);
       setData(result);
     } catch (err) {
       const status = (err as { status?: number }).status;
       if (status === 401) {
         setMe(null);
         setData(null);
+        setLoadedSegments([]);
         setError('Session expired. Connect to Jira again.');
       } else {
         setError(err instanceof Error ? err.message : 'Failed to load worklogs');
@@ -142,9 +160,9 @@ export function App() {
         setMe(profile);
         if (!profile) return;
         if (layout === 'week') {
-          const range = currentWeekRange(weekStart);
-          const focus = weekContaining(toIsoDate(new Date()), weekStart).from;
-          setWeekFocusAnchor(focus);
+          const range = defaultWeekRange(weekStart, weekWindowWeeks);
+          const windowStart = defaultWeekWindowStart(weekStart, weekWindowWeeks);
+          setWeekFocusAnchor(windowStart);
           void load(range.from, range.to);
           return;
         }
@@ -157,18 +175,22 @@ export function App() {
   }, []);
 
   const focusWeek = useCallback(
-    (sun: string) => {
-      const focusStart = weekContaining(sun, weekStart).from;
-      const { from: weekFrom, to: weekTo } = focusedWeekBounds(sun, weekStart);
+    (windowStartIso: string) => {
+      const windowStart = weekContaining(windowStartIso, weekStart).from;
+      const { from: weekFrom, to: weekTo } = visibleWeekBounds(
+        windowStart,
+        weekStart,
+        weekWindowWeeks,
+      );
 
-      setWeekFocusAnchor(focusStart);
+      setWeekFocusAnchor(windowStart);
 
       let newFrom = from;
       let newTo = to;
 
       const displayWeekStart = weekContaining(from, weekStart).from;
-      if (focusStart < displayWeekStart) {
-        newFrom = shiftWeekAnchor(displayWeekStart, -WEEK_PREFETCH_WEEKS);
+      if (windowStart < displayWeekStart) {
+        newFrom = weekWindowStartForFocus(windowStart, weekStart, weekWindowWeeks);
       }
       if (weekFrom < newFrom) newFrom = weekFrom;
       if (weekTo > newTo) newTo = weekTo;
@@ -176,28 +198,30 @@ export function App() {
       if (newFrom !== from) setFrom(newFrom);
       if (newTo !== to) setTo(newTo);
 
-      const cached = dataRef.current;
-      if (!cached || !isRangeCoveredByCache(cached, weekFrom, weekTo)) {
+      if (!isRangeCoveredBySegments(loadedSegmentsRef.current, weekFrom, weekTo)) {
         void prefetchRange(weekFrom, weekTo);
       }
     },
-    [from, to, weekStart, prefetchRange],
+    [from, to, weekStart, weekWindowWeeks, prefetchRange],
   );
 
   const applyWeekRange = useCallback(
     (newFrom: string, newTo: string, focusOverride?: string) => {
-      const nextFocus = clampWeekFocusToRange(
+      const nextWindow = clampWeekWindowStart(
         focusOverride ?? weekFocus,
         newFrom,
         newTo,
         weekStart,
+        weekWindowWeeks,
       );
-      setWeekFocusAnchor(nextFocus);
+      setWeekFocusAnchor(nextWindow);
 
       const cached = dataRef.current;
       if (cached && cached.from <= newTo && cached.to >= newFrom) {
         setFrom(newFrom);
         setTo(newTo);
+        const visible = visibleWeekBounds(nextWindow, weekStart, weekWindowWeeks);
+        void prefetchRange(visible.from, visible.to);
         if (newFrom < cached.from) {
           void prefetchRange(newFrom, addDaysIso(cached.from, -1));
         }
@@ -209,19 +233,45 @@ export function App() {
 
       void load(newFrom, newTo);
     },
-    [weekFocus, weekStart, load, prefetchRange],
+    [weekFocus, weekStart, weekWindowWeeks, load, prefetchRange],
+  );
+
+  const resetToTodayView = useCallback(
+    (targetLayout: CalendarLayout) => {
+      if (targetLayout === 'week') {
+        const range = defaultWeekRange(weekStart, weekWindowWeeks);
+        const windowStart = defaultWeekWindowStart(weekStart, weekWindowWeeks);
+        setWeekFocusAnchor(windowStart);
+        void load(range.from, range.to);
+        return;
+      }
+      const range = currentMonthRange();
+      void load(range.from, range.to);
+    },
+    [load, weekStart, weekWindowWeeks],
   );
 
   const goToToday = useCallback(() => {
-    if (layout === 'week') {
-      const range = currentWeekRange(weekStart);
-      const focus = weekContaining(toIsoDate(new Date()), weekStart).from;
-      applyWeekRange(range.from, range.to, focus);
-      return;
-    }
-    const range = currentMonthRange();
+    resetToTodayView(layout);
+  }, [layout, resetToTodayView]);
+
+  useEffect(() => {
+    if (layout !== 'week' || !authChecked || !me) return;
+    if (prevWeekWindowWeeksRef.current === weekWindowWeeks) return;
+    prevWeekWindowWeeksRef.current = weekWindowWeeks;
+    const range = defaultWeekRange(weekStart, weekWindowWeeks);
+    const windowStart = defaultWeekWindowStart(weekStart, weekWindowWeeks);
+    setWeekFocusAnchor(windowStart);
     void load(range.from, range.to);
-  }, [layout, load, weekStart, applyWeekRange]);
+  }, [layout, authChecked, me, weekStart, weekWindowWeeks, load]);
+
+  useEffect(() => {
+    if (layout !== 'week' || !data) return;
+
+    const visible = visibleWeekBounds(weekFocus, weekStart, weekWindowWeeks);
+    if (isRangeCoveredBySegments(loadedSegments, visible.from, visible.to)) return;
+    void prefetchRange(visible.from, visible.to);
+  }, [layout, data, weekFocus, weekStart, weekWindowWeeks, prefetchRange, loadedSegments]);
 
   useEffect(() => {
     if (layout !== 'week' || !data) return;
@@ -247,14 +297,17 @@ export function App() {
   const displayTotalSeconds = useMemo(() => {
     if (!data) return 0;
     if (layout === 'month') return data.totalSeconds;
-    const { dates } = weekContaining(weekFocus, weekStart);
+    const dates = weeksOnWindow(weekFocus, weekStart, weekWindowWeeks).flatMap((sun) =>
+      weekContaining(sun, weekStart).dates,
+    );
     return dates.reduce((sum, iso) => sum + (data.days[iso]?.totalSeconds ?? 0), 0);
-  }, [data, layout, weekFocus, weekStart]);
+  }, [data, layout, weekFocus, weekStart, weekWindowWeeks]);
 
   const onLogout = async () => {
     await logout();
     setMe(null);
     setData(null);
+    setLoadedSegments([]);
     setSelected(null);
     setDrawerOpen(false);
     setView('calendar');
@@ -268,34 +321,7 @@ export function App() {
   const changeLayout = (next: CalendarLayout) => {
     if (next === layout) return;
     updateSettings({ layout: next });
-
-    if (next === 'week') {
-      const focus = weekFocusForLayoutSwitch(from, to, weekStart);
-      const { from: rangeFrom, to: rangeTo } = weekRangeForMonthSwitch(from, to, focus);
-      const clampedFocus = clampWeekFocusToRange(focus, rangeFrom, rangeTo, weekStart);
-      setWeekFocusAnchor(clampedFocus);
-      setFrom(rangeFrom);
-      setTo(rangeTo);
-
-      const cached = data;
-      if (cached && cached.from <= rangeTo && cached.to >= rangeFrom) {
-        if (rangeFrom < cached.from) {
-          void prefetchRange(rangeFrom, addDaysIso(cached.from, -1));
-        }
-        if (rangeTo > cached.to) {
-          void prefetchRange(addDaysIso(cached.to, 1), rangeTo);
-        }
-        return;
-      }
-
-      void load(rangeFrom, rangeTo);
-      return;
-    }
-
-    const monthStart = monthStartForWeek(weekFocus);
-    const d = parseLocal(monthStart);
-    const range = monthRange(d.getFullYear(), d.getMonth());
-    void load(range.from, range.to);
+    resetToTodayView(next);
   };
 
   if (!authChecked) {
@@ -336,11 +362,19 @@ export function App() {
   const weekDisplayFrom = layout === 'week' ? from : rangeFrom;
   const weekDisplayTo = layout === 'week' ? to : rangeTo;
   const weekBlockingLoad = loading && !data;
+  const weekVisibleBounds = visibleWeekBounds(weekFocus, weekStart, weekWindowWeeks);
+  const weekVisibleLoading =
+    layout === 'week' &&
+    !weekBlockingLoad &&
+    data != null &&
+    !isRangeCoveredBySegments(loadedSegments, weekVisibleBounds.from, weekVisibleBounds.to);
+  const weekFetching = weekBlockingLoad || weekVisibleLoading;
+  const calendarLoading = layout === 'week' ? weekFetching : loading;
 
   const legend = (
     <Legend
       showLegend={showLegend}
-      loading={loading}
+      loading={calendarLoading}
       totalSeconds={data ? displayTotalSeconds : null}
     />
   );
@@ -368,17 +402,14 @@ export function App() {
               navMode="week"
               from={from}
               to={to}
-              loading={loading}
+              loading={weekFetching}
               onApply={applyWeekRange}
               onGoToday={() => goToToday()}
               weekFocus={weekFocus}
               weekStart={weekStart}
-              onPrevWeek={() =>
-                focusWeek(shiftWeekAnchor(weekContaining(weekFocus, weekStart).from, -1))
-              }
-              onNextWeek={() =>
-                focusWeek(shiftWeekAnchor(weekContaining(weekFocus, weekStart).from, 1))
-              }
+              weekWindowWeeks={weekWindowWeeks}
+              onPrevWeek={() => focusWeek(shiftWeekWindow(weekFocus, weekStart, -1, weekWindowWeeks))}
+              onNextWeek={() => focusWeek(shiftWeekWindow(weekFocus, weekStart, 1, weekWindowWeeks))}
             />
           ) : (
             <RangeBar
@@ -418,8 +449,9 @@ export function App() {
             rangeTo={weekDisplayTo}
             days={data?.days ?? {}}
             selected={selected}
-            loading={weekBlockingLoad}
+            loading={weekFetching}
             weekStart={weekStart}
+            visibleWeeks={weekWindowWeeks}
             showFutureDays={showFutureDays}
             weekSwipeEnabled={weekSwipeEnabled}
             onSelect={openDay}
@@ -427,7 +459,7 @@ export function App() {
           />
         )}
 
-        {!loading && data && data.totalSeconds === 0 ? (
+        {!calendarLoading && data && data.totalSeconds === 0 ? (
           <p className="empty">No worklogs in this range.</p>
         ) : null}
       </main>

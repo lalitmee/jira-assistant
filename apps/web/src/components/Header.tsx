@@ -1,10 +1,9 @@
 import type { ReactNode } from 'react';
 import type { Me } from '../api';
 import { Button } from './ui/Button';
-import { ArrowLeft } from './ui/icons';
+import { ChevronLeft } from './ui/icons';
 import { ThemeToggle } from './ThemeToggle';
 import { UserMenu } from './UserMenu';
-import styles from './Header.module.css';
 
 type Props = {
   me: Me | null;
@@ -19,15 +18,8 @@ export function Header({ me, onLogout, controls, onOpenSettings, onBack }: Props
     <header className="topbar">
       <div className="brand">
         {onBack ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={styles.backBtn}
-            onClick={onBack}
-            aria-label="Go back"
-          >
-            <ArrowLeft />
-            Back
+          <Button variant="icon" size="sm" onClick={onBack} aria-label="Back to calendar">
+            <ChevronLeft />
           </Button>
         ) : (
           <>

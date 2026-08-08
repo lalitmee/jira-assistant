@@ -12,8 +12,8 @@ import {
   spanDays,
   toIsoDate,
 } from '../api';
-import { canGoNextWeek, isCurrentWeek } from './DayChip';
-import type { WeekStart } from '../settings';
+import { canGoNextWeek, canGoNextWeekWindow, isCurrentWeek, isCurrentWeekWindow } from './DayChip';
+import type { WeekStart, WeekWindowWeeks } from '../settings';
 import { RangeTrigger } from './RangeTrigger';
 import { Button } from './ui/Button';
 import { Divider } from './ui/Divider';
@@ -29,6 +29,7 @@ type Props = {
   navMode?: 'month' | 'week';
   weekFocus?: string;
   weekStart?: WeekStart;
+  weekWindowWeeks?: WeekWindowWeeks;
   onPrevWeek?: () => void;
   onNextWeek?: () => void;
 };
@@ -115,7 +116,9 @@ export function RangeBar(props: Props) {
   const onCurrentMonth = isCurrentMonth(from);
   const onCurrentWeek =
     navMode === 'week' && props.weekFocus && props.weekStart
-      ? isCurrentWeek(props.weekFocus, props.weekStart)
+      ? props.weekWindowWeeks === 2
+        ? isCurrentWeekWindow(props.weekFocus, props.weekStart, 2)
+        : isCurrentWeek(props.weekFocus, props.weekStart)
       : false;
   const pickerOnCurrentMonth = isPickerAtCurrentMonth(pickerMonth, PICKER_MONTHS_SHOWN, today);
 
@@ -145,7 +148,9 @@ export function RangeBar(props: Props) {
 
   const canGoNext =
     navMode === 'week' && props.weekFocus && props.weekStart
-      ? canGoNextWeek(props.weekFocus, to, props.weekStart)
+      ? props.weekWindowWeeks === 2
+        ? canGoNextWeekWindow(props.weekFocus, to, props.weekStart, 2)
+        : canGoNextWeek(props.weekFocus, to, props.weekStart)
       : canGoNextMonth(from);
 
   const prevLabel = navMode === 'week' ? 'Previous week' : 'Previous month';

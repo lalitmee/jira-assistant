@@ -3,6 +3,7 @@ import { THEME_CHANGE_EVENT, type Theme } from './theme';
 
 export type CalendarSpacing = 'tight' | 'normal' | 'relaxed';
 export type WeekStart = 'sunday' | 'monday';
+export type WeekWindowWeeks = 1 | 2;
 export type TimeFormat = 'system' | '12h' | '24h';
 export type DateFormat = 'short' | 'medium' | 'numeric' | 'iso';
 export type DrawerGroupBy = 'issue' | 'chronological';
@@ -13,6 +14,7 @@ export type Settings = {
   calendarGrid: boolean;
   calendarSpacing: CalendarSpacing;
   weekStart: WeekStart;
+  weekWindowWeeks: WeekWindowWeeks;
   showFutureDays: boolean;
   weekSwipeEnabled: boolean;
   timeFormat: TimeFormat;
@@ -35,6 +37,7 @@ export const DEFAULT_SETTINGS: Settings = {
   calendarGrid: false,
   calendarSpacing: 'normal',
   weekStart: 'sunday',
+  weekWindowWeeks: 1,
   showFutureDays: true,
   weekSwipeEnabled: true,
   timeFormat: 'system',
@@ -49,6 +52,11 @@ export const CALENDAR_SPACING_OPTIONS: Array<{ value: CalendarSpacing; label: st
   { value: 'tight', label: 'Tight' },
   { value: 'normal', label: 'Normal' },
   { value: 'relaxed', label: 'Relaxed' },
+];
+
+export const WEEK_WINDOW_WEEKS_OPTIONS: Array<{ value: WeekWindowWeeks; label: string }> = [
+  { value: 1, label: '1 week' },
+  { value: 2, label: '2 weeks' },
 ];
 
 function readLegacyTheme(): Theme | null {
@@ -81,6 +89,10 @@ function systemTheme(): Theme {
 function parseCalendarSpacing(value: unknown): CalendarSpacing | null {
   if (value === 'tight' || value === 'normal' || value === 'relaxed') return value;
   return null;
+}
+
+function parseWeekWindowWeeks(value: unknown): WeekWindowWeeks {
+  return value === 2 ? 2 : 1;
 }
 
 function sharedFields(
@@ -118,6 +130,7 @@ function sharedFields(
   return {
     showLegend: o.showLegend !== false,
     weekStart,
+    weekWindowWeeks: parseWeekWindowWeeks(o.weekWindowWeeks),
     showFutureDays: o.showFutureDays !== false,
     weekSwipeEnabled: o.weekSwipeEnabled !== false,
     timeFormat,
