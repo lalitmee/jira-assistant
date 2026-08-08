@@ -24,6 +24,8 @@ import {
   clampWeekFocusToRange,
   currentWeekRange,
   earlierWeekPrefetchChunk,
+  focusedWeekBounds,
+  isRangeCoveredByCache,
   monthStartForWeek,
   parseLocal,
   shiftWeekAnchor,
@@ -157,14 +159,29 @@ export function App() {
   const focusWeek = useCallback(
     (sun: string) => {
       const focusStart = weekContaining(sun, weekStart).from;
+      const { from: weekFrom, to: weekTo } = focusedWeekBounds(sun, weekStart);
+
       setWeekFocusAnchor(focusStart);
+
+      let newFrom = from;
+      let newTo = to;
 
       const displayWeekStart = weekContaining(from, weekStart).from;
       if (focusStart < displayWeekStart) {
-        setFrom(shiftWeekAnchor(displayWeekStart, -WEEK_PREFETCH_WEEKS));
+        newFrom = shiftWeekAnchor(displayWeekStart, -WEEK_PREFETCH_WEEKS);
+      }
+      if (weekFrom < newFrom) newFrom = weekFrom;
+      if (weekTo > newTo) newTo = weekTo;
+
+      if (newFrom !== from) setFrom(newFrom);
+      if (newTo !== to) setTo(newTo);
+
+      const cached = dataRef.current;
+      if (!cached || !isRangeCoveredByCache(cached, weekFrom, weekTo)) {
+        void prefetchRange(weekFrom, weekTo);
       }
     },
-    [from, weekStart],
+    [from, to, weekStart, prefetchRange],
   );
 
   const applyWeekRange = useCallback(

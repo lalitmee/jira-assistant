@@ -194,6 +194,24 @@ export function currentWeekRange(weekStart: WeekStart = 'sunday'): { from: strin
   return { from, to: to > today ? today : to };
 }
 
+/** Inclusive bounds for the week containing `focusIso`, capped at today. */
+export function focusedWeekBounds(
+  focusIso: string,
+  weekStart: WeekStart = 'sunday',
+): { from: string; to: string } {
+  const today = toIso(new Date());
+  const { from, to } = weekContaining(focusIso, weekStart);
+  return { from, to: to > today ? today : to };
+}
+
+export function isRangeCoveredByCache(
+  cached: { from: string; to: string },
+  from: string,
+  to: string,
+): boolean {
+  return cached.from <= from && cached.to >= to;
+}
+
 export function weekLabelParts(
   anchorIso: string,
   weekStart: WeekStart = 'sunday',
