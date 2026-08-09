@@ -11,7 +11,7 @@
     "build": "yarn workspace @jira-assistant/api build && yarn workspace @jira-assistant/web build",
     "start:prod": "zsh scripts/start-prod.zsh",
     "prod": "yarn build && yarn start:prod",
-    "test": "yarn workspace @jira-assistant/api test",
+    "test": "yarn workspace @jira-assistant/api test && yarn workspace @jira-assistant/web test",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
