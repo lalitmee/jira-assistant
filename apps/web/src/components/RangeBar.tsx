@@ -3,15 +3,20 @@ import { DayPicker, type DateRange } from 'react-day-picker';
 import { parseISO } from 'date-fns';
 import {
   MAX_RANGE_DAYS,
+  ROLLING_RANGE_30_DAYS,
+  ROLLING_RANGE_7_DAYS,
   canGoNextMonth,
   currentMonthRange,
   isCurrentMonth,
+  isSameRange,
   lastMonthRange,
+  lastNDaysRange,
   rangeLabelParts,
   shiftMonthRange,
   spanDays,
   toIsoDate,
 } from '../api';
+import { currentWeekRange, lastWeekRange } from '../lib/calendarDates';
 import { canGoNextWeek, canGoNextWeekWindow, isCurrentWeek, isCurrentWeekWindow } from './DayChip';
 import type { WeekStart, WeekWindowWeeks } from '../settings';
 import { RangeTrigger } from './RangeTrigger';
@@ -46,31 +51,40 @@ function toRange(from: string, to: string): DateRange {
 
 const PICKER_MONTHS_SHOWN = 2;
 
-/** True when the picker view already centers on the current month (incl. Jul+Aug at end). */
-function isPickerAtCurrentMonth(pickerMonth: Date, monthsShown: number, endMonth: Date): boolean {
-  const now = new Date();
-  const curY = now.getFullYear();
-  const curM = now.getMonth();
+type RangePreset =
+  | 'this-month'
+  | 'last-month'
+  | 'this-week'
+  | 'last-week'
+  | 'last-7-days'
+  | 'last-30-days';
 
-  const startY = pickerMonth.getFullYear();
-  const startM = pickerMonth.getMonth();
-
-  let includesCurrent = false;
-  for (let i = 0; i < monthsShown; i++) {
-    const d = new Date(startY, startM + i, 1);
-    if (d.getFullYear() === curY && d.getMonth() === curM) {
-      includesCurrent = true;
-      break;
-    }
+function presetRange(
+  preset: RangePreset,
+  weekStart: WeekStart,
+): { from: string; to: string } {
+  switch (preset) {
+    case 'this-month':
+      return currentMonthRange();
+    case 'last-month':
+      return lastMonthRange();
+    case 'this-week':
+      return currentWeekRange(weekStart);
+    case 'last-week':
+      return lastWeekRange(weekStart);
+    case 'last-7-days':
+      return lastNDaysRange(ROLLING_RANGE_7_DAYS);
+    case 'last-30-days':
+      return lastNDaysRange(ROLLING_RANGE_30_DAYS);
   }
-  if (!includesCurrent) return false;
-  if (startY === curY && startM === curM) return true;
+}
 
-  const lastVisible = new Date(startY, startM + monthsShown - 1, 1);
-  return (
-    lastVisible.getFullYear() === endMonth.getFullYear() &&
-    lastVisible.getMonth() === endMonth.getMonth()
-  );
+function presetPickerMonth(preset: RangePreset, rangeFrom: string): Date {
+  if (preset === 'this-month' || preset === 'this-week') {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), 1);
+  }
+  return parseISO(rangeFrom);
 }
 
 export function RangeBar(props: Props) {
@@ -108,17 +122,17 @@ export function RangeBar(props: Props) {
     setOpen(false);
   };
 
-  const applyPreset = (preset: 'this-month' | 'last-month') => {
-    const range = preset === 'this-month' ? currentMonthRange() : lastMonthRange();
-    if (preset === 'this-month') {
-      const today = new Date();
-      setPickerMonth(new Date(today.getFullYear(), today.getMonth(), 1));
-    } else {
-      setPickerMonth(parseISO(range.from));
-    }
+  const weekStart = props.weekStart ?? 'sunday';
+
+  const applyPreset = (preset: RangePreset) => {
+    const range = presetRange(preset, weekStart);
+    setPickerMonth(presetPickerMonth(preset, range.from));
     onApply(range.from, range.to);
     setOpen(false);
   };
+
+  const onThisMonth = isSameRange(from, to, currentMonthRange());
+  const onThisWeek = isSameRange(from, to, currentWeekRange(weekStart));
 
   const onCurrentMonth = isCurrentMonth(from);
   const onCurrentWeek =
@@ -127,13 +141,6 @@ export function RangeBar(props: Props) {
         ? isCurrentWeekWindow(props.weekFocus, props.weekStart, 2)
         : isCurrentWeek(props.weekFocus, props.weekStart)
       : false;
-  const pickerOnCurrentMonth = isPickerAtCurrentMonth(pickerMonth, PICKER_MONTHS_SHOWN, today);
-
-  const goPickerToday = () => {
-    const today = new Date();
-    setPickerMonth(new Date(today.getFullYear(), today.getMonth(), 1));
-  };
-
   const goPrev = () => {
     if (navMode === 'week') {
       props.onPrevWeek?.();
@@ -202,29 +209,60 @@ export function RangeBar(props: Props) {
             {open ? (
               <div className="range-popover" role="dialog" aria-label="Choose date range">
                 <div className="range-presets">
+                  {navMode === 'week' ? (
+                    <>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={loading || onThisWeek}
+                        onClick={() => applyPreset('this-week')}
+                      >
+                        This week
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={loading}
+                        onClick={() => applyPreset('last-week')}
+                      >
+                        Last week
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={loading || onThisMonth}
+                        onClick={() => applyPreset('this-month')}
+                      >
+                        This month
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={loading}
+                        onClick={() => applyPreset('last-month')}
+                      >
+                        Last month
+                      </Button>
+                    </>
+                  )}
                   <Button
                     variant="secondary"
                     size="sm"
-                    disabled={loading || pickerOnCurrentMonth}
-                    onClick={goPickerToday}
+                    disabled={loading}
+                    onClick={() => applyPreset('last-7-days')}
                   >
-                    Today
+                    Last 7 days
                   </Button>
                   <Button
                     variant="secondary"
                     size="sm"
                     disabled={loading}
-                    onClick={() => applyPreset('this-month')}
+                    onClick={() => applyPreset('last-30-days')}
                   >
-                    This month
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    disabled={loading}
-                    onClick={() => applyPreset('last-month')}
-                  >
-                    Last month
+                    Last 30 days
                   </Button>
                 </div>
                 <DayPicker

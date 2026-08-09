@@ -162,6 +162,26 @@ export function lastMonthRange(): { from: string; to: string } {
   return monthRange(today.getFullYear(), today.getMonth() - 1);
 }
 
+export const ROLLING_RANGE_7_DAYS = 7;
+export const ROLLING_RANGE_30_DAYS = 30;
+
+/** Inclusive rolling window ending today (e.g. 7 → today and the prior 6 days). */
+export function lastNDaysRange(days: number): { from: string; to: string } {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const from = new Date(today);
+  from.setDate(from.getDate() - (days - 1));
+  return { from: toIsoDate(from), to: toIsoDate(today) };
+}
+
+export function isSameRange(
+  from: string,
+  to: string,
+  range: { from: string; to: string },
+): boolean {
+  return from === range.from && to === range.to;
+}
+
 export function spanDays(from: string, to: string): number {
   const a = new Date(`${from}T00:00:00`);
   const b = new Date(`${to}T00:00:00`);
