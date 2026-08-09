@@ -540,18 +540,21 @@ export const MonthView = forwardRef<MonthViewHandle, MonthProps>(function MonthV
         }
 
         const direction = delta > 0 ? 1 : -1;
-        let remaining = Math.abs(delta);
+        let stepsLeft = Math.abs(delta);
 
         const step = () => {
-          if (remaining <= 0) {
+          if (stepsLeft <= 0) {
             onResetToToday();
             onDone?.();
             return;
           }
-          remaining -= 1;
-          carousel.goToPage(1 + direction, {
-            onComplete: () => requestAnimationFrame(() => step()),
+          const moved = carousel.goToPage(1 + direction, {
+            onComplete: () => {
+              stepsLeft -= 1;
+              requestAnimationFrame(() => step());
+            },
           });
+          if (!moved) requestAnimationFrame(() => step());
         };
         step();
       },

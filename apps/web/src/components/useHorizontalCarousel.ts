@@ -89,6 +89,7 @@ export function useHorizontalCarousel({
   const pendingFocusRef = useRef<string | null>(null);
   const pendingFlyRef = useRef<(() => void) | null>(null);
   const pendingStepRef = useRef<(() => void) | null>(null);
+  const animatingRef = useRef(false);
 
   const [ready, setReady] = useState(false);
   const [index, setIndex] = useState(() => focusIndex(pageKeys, focusKey));
@@ -142,11 +143,13 @@ export function useHorizontalCarousel({
         return;
       }
       internalNavRef.current = true;
+      animatingRef.current = true;
       setIndex(clamped);
       setDragOffset(0);
       setAnimating(true);
       if (options?.onComplete) pendingStepRef.current = options.onComplete;
       if (key === focusKey) {
+        animatingRef.current = false;
         setAnimating(false);
         internalNavRef.current = false;
         options?.onComplete?.();
@@ -168,24 +171,25 @@ export function useHorizontalCarousel({
   }, []);
 
   const goToPage = useCallback(
-    (nextIndex: number, options?: FlyOptions) => {
-      if (dragRef.current?.dragging || animating) return;
+    (nextIndex: number, options?: FlyOptions): boolean => {
+      if (dragRef.current?.dragging || animatingRef.current) return false;
       if (nextIndex < 0) {
         onFocusEarlier?.();
-        return;
+        return false;
       }
       if (nextIndex > maxIndex) {
         options?.onComplete?.();
-        return;
+        return false;
       }
       commitPage(nextIndex, options);
+      return true;
     },
-    [animating, commitPage, maxIndex, onFocusEarlier],
+    [commitPage, maxIndex, onFocusEarlier],
   );
 
   const flyToIndex = useCallback(
     (targetIndex: number, options?: FlyOptions) => {
-      if (dragRef.current?.dragging || animating) return;
+      if (dragRef.current?.dragging || animatingRef.current) return;
       const clamped = clampIndex(targetIndex, pageKeys.length);
       if (clamped === indexRef.current) {
         options?.onComplete?.();
@@ -204,14 +208,15 @@ export function useHorizontalCarousel({
       setTransitionMs(flyDurationMs(clamped - indexRef.current));
       setIndex(clamped);
       setDragOffset(0);
+      animatingRef.current = true;
       setAnimating(true);
     },
-    [animating, pageKeys.length],
+    [pageKeys.length],
   );
 
   const flyByPages = useCallback(
     (pageDelta: number, options?: FlyOptions) => {
-      if (dragRef.current?.dragging || animating || pageDelta === 0 || pageWidth === 0) {
+      if (dragRef.current?.dragging || animatingRef.current || pageDelta === 0 || pageWidth === 0) {
         options?.onComplete?.();
         return;
       }
@@ -222,10 +227,11 @@ export function useHorizontalCarousel({
       internalNavRef.current = true;
       pendingFlyRef.current = options?.onComplete ?? null;
       setTransitionMs(flyDurationMs(pageDelta));
+      animatingRef.current = true;
       setAnimating(true);
       setDragOffset(-pageDelta * pageWidth);
     },
-    [animating, pageWidth],
+    [pageWidth],
   );
 
   useLayoutEffect(() => {
@@ -385,6 +391,7 @@ export function useHorizontalCarousel({
     const pendingFly = pendingFlyRef.current;
     if (pendingFly) {
       pendingFlyRef.current = null;
+      animatingRef.current = false;
       setAnimating(false);
       pendingFly();
       setDragOffset(0);
@@ -403,14 +410,15 @@ export function useHorizontalCarousel({
       }
     }
 
+    internalNavRef.current = false;
+    animatingRef.current = false;
+    setAnimating(false);
+
     const pendingStep = pendingStepRef.current;
     if (pendingStep) {
       pendingStepRef.current = null;
       pendingStep();
     }
-
-    internalNavRef.current = false;
-    setAnimating(false);
   };
 
   return {
