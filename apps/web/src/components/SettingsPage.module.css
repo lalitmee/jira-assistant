@@ -18,3 +18,14 @@
   justify-content: center;
   padding-top: 8px;
 }
+
+.auditHours {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auditHoursSep {
+  color: var(--muted);
+  font-size: 13px;
+}

@@ -102,7 +102,7 @@ export function shouldPrefetchLaterWeeks(
 /** Days after the visible window through the end of the selected range (or prefetch cap). */
 export function laterWeekPrefetchChunk(
   focusIso: string,
-  rangeFrom: string,
+  _rangeFrom: string,
   rangeTo: string,
   weekStart: WeekStart = 'sunday',
   windowWeeks: WeekWindowWeeks = 1,

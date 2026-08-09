@@ -2,7 +2,12 @@ import type { MouseEvent } from 'react';
 import type { DayBucket, WorklogEntry } from '../api';
 import { estimateStatus, formatDuration } from '../api';
 import { useSettings } from '../SettingsContext';
-import { formatDrawerDate, formatDrawerTime } from '../settings';
+import {
+  auditConfigFromSettings,
+  formatDrawerDate,
+  formatDrawerTime,
+  type IssueLinkTarget,
+} from '../settings';
 import { hoursStatus, parseLocal } from './DayChip';
 
 type Props = {
@@ -28,10 +33,19 @@ function issueUrl(siteUrl: string, key: string): string {
   return `${origin}/browse/${key}`;
 }
 
-function IssueKeyLink({ siteUrl, issueKey }: { siteUrl: string; issueKey: string }) {
+function IssueKeyLink({
+  siteUrl,
+  issueKey,
+  linkTarget,
+}: {
+  siteUrl: string;
+  issueKey: string;
+  linkTarget: IssueLinkTarget;
+}) {
   const url = issueUrl(siteUrl, issueKey);
 
-  const openInNewTab = (e: MouseEvent<HTMLAnchorElement>) => {
+  const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (linkTarget === 'same-tab') return;
     e.stopPropagation();
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
     e.preventDefault();
@@ -42,9 +56,9 @@ function IssueKeyLink({ siteUrl, issueKey }: { siteUrl: string; issueKey: string
     <a
       className="issue-key"
       href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={openInNewTab}
+      target={linkTarget === 'new-tab' ? '_blank' : undefined}
+      rel={linkTarget === 'new-tab' ? 'noopener noreferrer' : undefined}
+      onClick={handleClick}
     >
       {issueKey}
     </a>
@@ -78,17 +92,6 @@ function chronologicalEntries(worklogs: WorklogEntry[]): WorklogEntry[] {
   );
 }
 
-function drawerStatusClass(date: string | null, bucket: DayBucket | undefined): string {
-  if (!date) return '';
-  const weekday = parseLocal(date).getDay();
-  const isWeekend = weekday === 0 || weekday === 6;
-  const status = hoursStatus(bucket?.totalSeconds ?? 0, isWeekend);
-  if (status === 'ok') return 'hours-ok';
-  if (status === 'under') return 'hours-bad';
-  if (status === 'over') return 'hours-over';
-  return 'hours-weekend';
-}
-
 function estimateClass(group: IssueGroup): string {
   const status = estimateStatus(group.devEstHours, group.myTotalSeconds);
   if (status === 'exact') return 'est-exact';
@@ -97,22 +100,44 @@ function estimateClass(group: IssueGroup): string {
   return 'est-none';
 }
 
-function formatLoggedVsEst(group: IssueGroup): { logged: string; est: string } {
-  const logged = formatDuration(group.myTotalSeconds);
-  if (group.devEstHours == null || !(group.devEstHours > 0)) return { logged, est: '—' };
-  return { logged, est: formatDuration(Math.round(group.devEstHours * 3600)) };
-}
-
 export function DayDrawer({ open, date, bucket, siteUrl, onClose }: Props) {
   const { settings } = useSettings();
+  const audit = auditConfigFromSettings(settings);
+  const durationFormat = settings.durationFormat;
   const worklogs = bucket?.worklogs ?? [];
   const total = bucket?.totalSeconds ?? 0;
   const groups = groupByIssue(worklogs);
   const flatEntries = chronologicalEntries(worklogs);
-  const statusClass = drawerStatusClass(date, bucket);
   const label = date ? formatDrawerDate(date, settings.dateFormat) : '';
 
   const formatTime = (iso: string) => formatDrawerTime(iso, settings.timeFormat);
+  const formatDur = (seconds: number) => formatDuration(seconds, durationFormat);
+
+  const formatLoggedVsEst = (group: IssueGroup): { logged: string; est: string } => {
+    const logged = formatDur(group.myTotalSeconds);
+    if (group.devEstHours == null || !(group.devEstHours > 0)) return { logged, est: '—' };
+    return { logged, est: formatDur(Math.round(group.devEstHours * 3600)) };
+  };
+
+  const statusClass = (() => {
+    if (!date) return '';
+    const weekday = parseLocal(date).getDay();
+    const isWeekend = weekday === 0 || weekday === 6;
+    const status = hoursStatus(bucket?.totalSeconds ?? 0, isWeekend, audit);
+    if (status === 'ok') return 'hours-ok';
+    if (status === 'under') return 'hours-bad';
+    if (status === 'over') return 'hours-over';
+    return 'hours-weekend';
+  })();
+
+  const renderComment = (comment: string | null) => {
+    if (!settings.drawerShowComments) return null;
+    return (
+      <p className="entry-comment">
+        {comment || <span className="entry-comment-empty">No comment</span>}
+      </p>
+    );
+  };
 
   return (
     <>
@@ -133,7 +158,7 @@ export function DayDrawer({ open, date, bucket, siteUrl, onClose }: Props) {
             {date ? (
               <div className="drawer-stats">
                 <span className="drawer-stat">
-                  <strong>{formatDuration(total)}</strong>
+                  <strong>{formatDur(total)}</strong>
                   <span>total</span>
                 </span>
                 <span className="drawer-stat-sep" aria-hidden>
@@ -168,14 +193,16 @@ export function DayDrawer({ open, date, bucket, siteUrl, onClose }: Props) {
               {flatEntries.map((wl) => (
                 <li className="entry-row entry-row-flat" key={wl.id}>
                   <div className="entry-time-col">
-                    <span className="entry-duration">{formatDuration(wl.timeSpentSeconds)}</span>
+                    <span className="entry-duration">{formatDur(wl.timeSpentSeconds)}</span>
                     <span className="entry-clock">{formatTime(wl.started)}</span>
                   </div>
                   <div className="entry-flat-meta">
-                    <IssueKeyLink siteUrl={siteUrl} issueKey={wl.issueKey} />
-                    <p className="entry-comment">
-                      {wl.comment || <span className="entry-comment-empty">No comment</span>}
-                    </p>
+                    <IssueKeyLink
+                      siteUrl={siteUrl}
+                      issueKey={wl.issueKey}
+                      linkTarget={settings.issueLinkTarget}
+                    />
+                    {renderComment(wl.comment)}
                   </div>
                 </li>
               ))}
@@ -192,7 +219,11 @@ export function DayDrawer({ open, date, bucket, siteUrl, onClose }: Props) {
                   <article className={`issue-card ${estimateClass(group)}`} key={group.issueKey}>
                     <div className="issue-card-top">
                       <header className="issue-card-header">
-                        <IssueKeyLink siteUrl={siteUrl} issueKey={group.issueKey} />
+                        <IssueKeyLink
+                          siteUrl={siteUrl}
+                          issueKey={group.issueKey}
+                          linkTarget={settings.issueLinkTarget}
+                        />
                         {settings.drawerShowEstimates ? (
                           <span
                             className="issue-total"
@@ -208,21 +239,19 @@ export function DayDrawer({ open, date, bucket, siteUrl, onClose }: Props) {
                           <span className="issue-total">{logged}</span>
                         )}
                       </header>
-                      <h4 className="issue-summary">{group.issueSummary}</h4>
+                      {settings.drawerShowSummary ? (
+                        <h4 className="issue-summary">{group.issueSummary}</h4>
+                      ) : null}
                     </div>
 
                     <ul className="entry-list">
                       {group.worklogs.map((wl) => (
                         <li className="entry-row" key={wl.id}>
                           <div className="entry-time-col">
-                            <span className="entry-duration">
-                              {formatDuration(wl.timeSpentSeconds)}
-                            </span>
+                            <span className="entry-duration">{formatDur(wl.timeSpentSeconds)}</span>
                             <span className="entry-clock">{formatTime(wl.started)}</span>
                           </div>
-                          <p className="entry-comment">
-                            {wl.comment || <span className="entry-comment-empty">No comment</span>}
-                          </p>
+                          {renderComment(wl.comment)}
                         </li>
                       ))}
                     </ul>

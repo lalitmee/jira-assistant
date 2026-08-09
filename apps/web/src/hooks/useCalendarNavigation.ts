@@ -1,24 +1,26 @@
 import { useState, useCallback } from 'react';
-import { defaultRange } from '../api';
 import {
-  defaultWeekWindowStart,
   clampWeekWindowStart,
   weekContaining,
 } from '../components/DayChip';
-import type { WeekStart, WeekWindowWeeks } from '../settings';
+import {
+  rangeForStartup,
+  weekFocusForStartup,
+  type WeekStart,
+  type WeekWindowWeeks,
+} from '../settings';
 
 export function useCalendarNavigation(weekStart: WeekStart, weekWindowWeeks: WeekWindowWeeks) {
-  const initial = defaultRange();
+  const initial = rangeForStartup('month-to-date', weekStart, weekWindowWeeks, true);
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
   const [selected, setSelected] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [weekFocusAnchor, setWeekFocusAnchor] = useState(() =>
-    defaultWeekWindowStart(weekStart, weekWindowWeeks),
+    weekFocusForStartup('month-to-date', weekStart, weekWindowWeeks),
   );
   const [prevWeekStart, setPrevWeekStart] = useState(weekStart);
 
-  // Directly adjust state during render when weekStart settings change (prevents extra update frame)
   if (weekStart !== prevWeekStart) {
     setPrevWeekStart(weekStart);
     setWeekFocusAnchor((prev) =>
@@ -38,6 +40,19 @@ export function useCalendarNavigation(weekStart: WeekStart, weekWindowWeeks: Wee
     setSelected(null);
   }, []);
 
+  const applyStartupRange = useCallback(
+    (
+      startupRange: Parameters<typeof rangeForStartup>[0],
+      showFutureDays: boolean,
+    ) => {
+      const range = rangeForStartup(startupRange, weekStart, weekWindowWeeks, showFutureDays);
+      setFrom(range.from);
+      setTo(range.to);
+      setWeekFocusAnchor(weekFocusForStartup(startupRange, weekStart, weekWindowWeeks));
+    },
+    [weekStart, weekWindowWeeks],
+  );
+
   return {
     from,
     to,
@@ -49,5 +64,6 @@ export function useCalendarNavigation(weekStart: WeekStart, weekWindowWeeks: Wee
     setWeekFocusAnchor,
     openDay,
     closeDay,
+    applyStartupRange,
   };
 }

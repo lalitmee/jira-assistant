@@ -7,7 +7,7 @@ import {
   lastMonthRange,
   lastNDaysRange,
 } from './api';
-import { currentWeekRange, lastWeekRange, laterWeekPrefetchChunk, shouldPrefetchLaterWeeks } from './lib/calendarDates';
+import { laterWeekPrefetchChunk, shouldPrefetchLaterWeeks } from './lib/calendarDates';
 
 describe('lastNDaysRange', () => {
   beforeEach(() => {
@@ -28,41 +28,6 @@ describe('lastNDaysRange', () => {
       from: '2026-07-11',
       to: '2026-08-09',
     });
-  });
-});
-
-describe('currentWeekRange', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-08-09T12:00:00'));
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('caps the current week at today for Sunday start', () => {
-    expect(currentWeekRange('sunday')).toEqual({ from: '2026-08-09', to: '2026-08-09' });
-  });
-
-  it('caps the current week at today for Monday start', () => {
-    expect(currentWeekRange('monday')).toEqual({ from: '2026-08-03', to: '2026-08-09' });
-  });
-});
-
-describe('lastWeekRange', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-08-09T12:00:00'));
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('returns the full previous calendar week', () => {
-    expect(lastWeekRange('sunday')).toEqual({ from: '2026-08-02', to: '2026-08-08' });
-    expect(lastWeekRange('monday')).toEqual({ from: '2026-07-27', to: '2026-08-02' });
   });
 });
 

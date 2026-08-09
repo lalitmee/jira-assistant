@@ -1,5 +1,6 @@
 import { useSettings } from '../SettingsContext';
-import { type Theme } from '../theme';
+import type { ThemePreference } from '../theme';
+import { resolveTheme } from '../settings';
 
 function SunIcon() {
   return (
@@ -21,26 +22,49 @@ function MoonIcon() {
   );
 }
 
+function SystemIcon() {
+  return (
+    <svg className="theme-toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M8 19h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+const CYCLE: ThemePreference[] = ['system', 'light', 'dark'];
+
+function nextTheme(current: ThemePreference): ThemePreference {
+  const idx = CYCLE.indexOf(current);
+  return CYCLE[(idx + 1) % CYCLE.length];
+}
+
+function themeLabel(preference: ThemePreference): string {
+  if (preference === 'system') return 'System';
+  if (preference === 'light') return 'Light';
+  return 'Dark';
+}
+
 export function ThemeToggle() {
   const { settings, updateSettings } = useSettings();
-  const theme = settings.theme;
-
-  const toggle = () => {
-    const next: Theme = theme === 'light' ? 'dark' : 'light';
-    updateSettings({ theme: next });
-  };
-
-  const nextLabel = theme === 'light' ? 'Dark' : 'Light';
+  const preference = settings.theme;
+  const resolved = resolveTheme(preference);
+  const next = nextTheme(preference);
 
   return (
     <button
       type="button"
       className="theme-toggle-btn"
-      onClick={toggle}
-      aria-label={`Switch to ${nextLabel} theme`}
-      title={`Switch to ${nextLabel}`}
+      onClick={() => updateSettings({ theme: next })}
+      aria-label={`Theme: ${themeLabel(preference)}. Switch to ${themeLabel(next)}.`}
+      title={`Theme: ${themeLabel(preference)}`}
     >
-      {theme === 'light' ? <MoonIcon /> : <SunIcon />}
+      {preference === 'system' ? (
+        <SystemIcon />
+      ) : resolved === 'light' ? (
+        <MoonIcon />
+      ) : (
+        <SunIcon />
+      )}
     </button>
   );
 }

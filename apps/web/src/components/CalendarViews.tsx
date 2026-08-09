@@ -34,7 +34,7 @@ import {
 } from './DayChip';
 import { useHorizontalCarousel } from './useHorizontalCarousel';
 
-import type { WeekStart, WeekWindowWeeks } from '../settings';
+import type { AuditConfig, DurationFormat, WeekStart, WeekWindowWeeks } from '../settings';
 
 function WeekdayHeaderRow({ weekStart }: { weekStart: WeekStart }) {
   const weekdays = weekdayLabels(weekStart);
@@ -130,7 +130,12 @@ function CalendarCarouselShell({
   );
 }
 
-type WeekProps = {
+type CalendarDisplayProps = {
+  audit: AuditConfig;
+  durationFormat: DurationFormat;
+};
+
+type WeekProps = CalendarDisplayProps & {
   focusSunday: string;
   rangeFrom: string;
   rangeTo: string;
@@ -159,6 +164,8 @@ function WeekRow({
   selected,
   weekStart,
   showFutureDays,
+  audit,
+  durationFormat,
   onSelect,
 }: {
   sun: string;
@@ -168,6 +175,8 @@ function WeekRow({
   selected: string | null;
   weekStart: WeekStart;
   showFutureDays: boolean;
+  audit: AuditConfig;
+  durationFormat: DurationFormat;
   onSelect: (iso: string) => void;
 }) {
   const { dates } = weekContaining(sun, weekStart);
@@ -184,6 +193,8 @@ function WeekRow({
               outOfRange={outOfRange}
               hideWeekday
               showFutureDays={showFutureDays}
+              audit={audit}
+              durationFormat={durationFormat}
               onSelect={onSelect}
             />
           </div>
@@ -202,6 +213,8 @@ function WeekPage({
   selected,
   weekStart,
   showFutureDays,
+  audit,
+  durationFormat,
   onSelect,
 }: {
   windowStart: string;
@@ -212,6 +225,8 @@ function WeekPage({
   selected: string | null;
   weekStart: WeekStart;
   showFutureDays: boolean;
+  audit: AuditConfig;
+  durationFormat: DurationFormat;
   onSelect: (iso: string) => void;
 }) {
   const weekAnchors = weeksOnWindow(windowStart, weekStart, visibleWeeks);
@@ -226,6 +241,8 @@ function WeekPage({
         selected={selected}
         weekStart={weekStart}
         showFutureDays={showFutureDays}
+        audit={audit}
+        durationFormat={durationFormat}
         onSelect={onSelect}
       />
     );
@@ -243,6 +260,8 @@ function WeekPage({
           selected={selected}
           weekStart={weekStart}
           showFutureDays={showFutureDays}
+          audit={audit}
+          durationFormat={durationFormat}
           onSelect={onSelect}
         />
       ))}
@@ -262,6 +281,8 @@ export const WeekView = forwardRef<WeekViewHandle, WeekProps>(function WeekView(
     visibleWeeks = 1,
     showFutureDays,
     weekSwipeEnabled,
+    audit,
+    durationFormat,
     onSelect,
     onFocusWeek,
     onResetToToday,
@@ -371,6 +392,8 @@ export const WeekView = forwardRef<WeekViewHandle, WeekProps>(function WeekView(
             selected={selected}
             weekStart={weekStart}
             showFutureDays={showFutureDays}
+            audit={audit}
+            durationFormat={durationFormat}
             onSelect={onSelect}
           />
         </div>
@@ -387,6 +410,8 @@ function MonthGrid({
   selected,
   weekStart,
   showFutureDays,
+  audit,
+  durationFormat,
   onSelect,
 }: {
   monthIso: string;
@@ -396,6 +421,8 @@ function MonthGrid({
   selected: string | null;
   weekStart: WeekStart;
   showFutureDays: boolean;
+  audit: AuditConfig;
+  durationFormat: DurationFormat;
   onSelect: (iso: string) => void;
 }) {
   const anchor = parseLocal(monthIso);
@@ -439,6 +466,8 @@ function MonthGrid({
                   outsideMonth={outsideMonth}
                   hideWeekday
                   showFutureDays={showFutureDays}
+                  audit={audit}
+                  durationFormat={durationFormat}
                   onSelect={onSelect}
                 />
               </div>
@@ -481,6 +510,10 @@ const MonthGridMemo = memo(MonthGrid, (prev, next) => {
     prev.selected === next.selected &&
     prev.weekStart === next.weekStart &&
     prev.showFutureDays === next.showFutureDays &&
+    prev.audit.minHours === next.audit.minHours &&
+    prev.audit.maxHours === next.audit.maxHours &&
+    prev.audit.auditWeekends === next.audit.auditWeekends &&
+    prev.durationFormat === next.durationFormat &&
     prev.onSelect === next.onSelect &&
     monthGridSignature(prev.monthIso, prev.weekStart, prev.days) ===
       monthGridSignature(next.monthIso, next.weekStart, next.days)
@@ -493,7 +526,7 @@ export type MonthViewHandle = {
   goToToday: (onDone?: () => void) => void;
 };
 
-type MonthProps = {
+type MonthProps = CalendarDisplayProps & {
   /** Any ISO date in the month to display (typically range `from`). */
   monthIso: string;
   days: Record<string, DayBucket>;
@@ -502,6 +535,7 @@ type MonthProps = {
   blockingLoad?: boolean;
   weekStart: WeekStart;
   showFutureDays: boolean;
+  monthSwipeEnabled: boolean;
   canGoNext?: boolean;
   onSelect: (iso: string) => void;
   onFocusMonth: (monthAnchorIso: string) => void;
@@ -516,6 +550,9 @@ export const MonthView = forwardRef<MonthViewHandle, MonthProps>(function MonthV
     blockingLoad,
     weekStart,
     showFutureDays,
+    monthSwipeEnabled,
+    audit,
+    durationFormat,
     canGoNext = true,
     onSelect,
     onFocusMonth,
@@ -537,7 +574,7 @@ export const MonthView = forwardRef<MonthViewHandle, MonthProps>(function MonthV
   const carousel = useHorizontalCarousel({
     pageKeys: monthPages,
     focusKey,
-    swipeEnabled: false,
+    swipeEnabled: monthSwipeEnabled,
     loading: blockingLoad,
     canGoNext,
     deferFocusNotify: true,
@@ -617,7 +654,7 @@ export const MonthView = forwardRef<MonthViewHandle, MonthProps>(function MonthV
       ready={carousel.ready}
       ariaLabel="Month view"
       listAriaLabel="Month pages"
-      swipeEnabled={false}
+      swipeEnabled={monthSwipeEnabled}
       viewportRef={carousel.viewportRef}
       animating={carousel.animating}
       trackStyle={carousel.trackStyle}
@@ -649,6 +686,8 @@ export const MonthView = forwardRef<MonthViewHandle, MonthProps>(function MonthV
               selected={selected}
               weekStart={weekStart}
               showFutureDays={showFutureDays}
+              audit={audit}
+              durationFormat={durationFormat}
               onSelect={onSelect}
             />
           </div>

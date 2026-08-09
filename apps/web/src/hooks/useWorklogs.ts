@@ -4,7 +4,6 @@ import {
   mergeWorklogsResponses,
   shiftMonthRange,
   canGoNextMonth,
-  currentMonthRange,
   type WorklogsResponse,
 } from '../api';
 import {
@@ -24,7 +23,11 @@ import {
   type CalendarLayout,
   type LoadedSegment,
 } from '../components/DayChip';
-import type { WeekStart, WeekWindowWeeks } from '../settings';
+import type { WeekStart, WeekWindowWeeks, StartupRange } from '../settings';
+import {
+  rangeForStartup,
+  weekFocusForStartup,
+} from '../settings';
 
 type UseWorklogsProps = {
   from: string;
@@ -36,6 +39,8 @@ type UseWorklogsProps = {
   layout: CalendarLayout;
   weekStart: WeekStart;
   weekWindowWeeks: WeekWindowWeeks;
+  startupRange: StartupRange;
+  showFutureDays: boolean;
   authChecked: boolean;
   meExists: boolean;
   clearAuth: (msg: string) => void;
@@ -51,6 +56,8 @@ export function useWorklogs({
   layout,
   weekStart,
   weekWindowWeeks,
+  startupRange,
+  showFutureDays,
   authChecked,
   meExists,
   clearAuth,
@@ -138,15 +145,23 @@ export function useWorklogs({
   useEffect(() => {
     if (!authChecked || !meExists || hasInitializedRef.current) return;
     hasInitializedRef.current = true;
+    const range = rangeForStartup(startupRange, weekStart, weekWindowWeeks, showFutureDays);
+    const windowStart = weekFocusForStartup(startupRange, weekStart, weekWindowWeeks);
     if (layout === 'week') {
-      const range = defaultWeekRange(weekStart, weekWindowWeeks);
-      const windowStart = defaultWeekWindowStart(weekStart, weekWindowWeeks);
       setWeekFocusAnchor(windowStart);
-      void load(range.from, range.to);
-    } else {
-      void load(from, to);
     }
-  }, [authChecked, meExists, layout, weekStart, weekWindowWeeks, load, from, to, setWeekFocusAnchor]);
+    void load(range.from, range.to);
+  }, [
+    authChecked,
+    meExists,
+    layout,
+    weekStart,
+    weekWindowWeeks,
+    startupRange,
+    showFutureDays,
+    load,
+    setWeekFocusAnchor,
+  ]);
 
   const prefetchAdjacentMonths = useCallback(
     (rangeFrom: string) => {
@@ -223,17 +238,14 @@ export function useWorklogs({
 
   const resetToTodayView = useCallback(
     (targetLayout: CalendarLayout) => {
+      const range = rangeForStartup(startupRange, weekStart, weekWindowWeeks, showFutureDays);
+      const windowStart = weekFocusForStartup(startupRange, weekStart, weekWindowWeeks);
       if (targetLayout === 'week') {
-        const range = defaultWeekRange(weekStart, weekWindowWeeks);
-        const windowStart = defaultWeekWindowStart(weekStart, weekWindowWeeks);
         setWeekFocusAnchor(windowStart);
-        void load(range.from, range.to);
-        return;
       }
-      const range = currentMonthRange();
       void load(range.from, range.to);
     },
-    [load, weekStart, weekWindowWeeks, setWeekFocusAnchor],
+    [load, weekStart, weekWindowWeeks, startupRange, showFutureDays, setWeekFocusAnchor],
   );
 
   // Sync settings/layout changes for week view

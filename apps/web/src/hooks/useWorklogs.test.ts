@@ -41,6 +41,8 @@ function renderWorklogsHook(overrides: Partial<Parameters<typeof useWorklogs>[0]
     layout: 'month' as const,
     weekStart: 'sunday' as const,
     weekWindowWeeks: 1 as const,
+    startupRange: 'month-to-date' as const,
+    showFutureDays: true,
     authChecked: true,
     meExists: true,
     clearAuth,

@@ -1,5 +1,6 @@
 import type { DayBucket } from '../api';
-import { formatDuration } from '../api';
+import { formatDuration, type DurationFormat } from '../api';
+import type { AuditConfig } from '../settings';
 import { parseLocal, toIso } from '../lib/calendarDates';
 
 export type { CalendarLayout } from '../lib/calendarDates';
@@ -38,11 +39,15 @@ export {
   type LoadedSegment,
 } from '../lib/calendarDates';
 
-export function hoursStatus(seconds: number, isWeekend: boolean): 'ok' | 'under' | 'over' | 'skip' {
-  if (isWeekend) return 'skip';
+export function hoursStatus(
+  seconds: number,
+  isWeekend: boolean,
+  audit: AuditConfig,
+): 'ok' | 'under' | 'over' | 'skip' {
+  if (isWeekend && !audit.auditWeekends) return 'skip';
   const hours = seconds / 3600;
-  if (hours >= 6 && hours <= 8) return 'ok';
-  if (hours > 8) return 'over';
+  if (hours >= audit.minHours && hours <= audit.maxHours) return 'ok';
+  if (hours > audit.maxHours) return 'over';
   return 'under';
 }
 
@@ -60,6 +65,8 @@ type DayChipProps = {
   hideWeekday?: boolean;
   /** When false, future days render as empty placeholders. */
   showFutureDays?: boolean;
+  audit?: AuditConfig;
+  durationFormat?: DurationFormat;
   onSelect: (iso: string) => void;
 };
 
@@ -72,6 +79,8 @@ export function DayChip({
   variant = 'card',
   hideWeekday = false,
   showFutureDays = true,
+  audit = { minHours: 6, maxHours: 8, auditWeekends: false },
+  durationFormat = 'hm',
   onSelect,
 }: DayChipProps) {
   const d = parseLocal(iso);
@@ -83,7 +92,7 @@ export function DayChip({
   if (!showFutureDays && isFuture) return null;
   const seconds = bucket?.totalSeconds ?? 0;
   const status =
-    isFuture || outOfRange || outsideMonth ? 'skip' : hoursStatus(seconds, isWeekend);
+    isFuture || outOfRange || outsideMonth ? 'skip' : hoursStatus(seconds, isWeekend, audit);
   const hasWorklogs = seconds > 0;
   const weekendDisabled = isWeekend && !hasWorklogs;
   const disabled = outOfRange || weekendDisabled || isFuture || outsideMonth;
@@ -129,7 +138,9 @@ export function DayChip({
       <span className="day-chip-date">
         {dayNum} {monthLabel}
       </span>
-      <span className="day-chip-hours">{seconds > 0 ? formatDuration(seconds) : '—'}</span>
+      <span className="day-chip-hours">
+        {seconds > 0 ? formatDuration(seconds, durationFormat) : '—'}
+      </span>
     </button>
   );
 }

@@ -4,14 +4,18 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
 import {
   applySettings,
+  bindSystemPreferenceListeners,
+  clampAuditHours,
   loadSettings,
   resetSettings,
   SETTINGS_CHANGE_EVENT,
+  unbindSystemPreferenceListeners,
   type Settings,
 } from './settings';
 
@@ -25,11 +29,18 @@ const SettingsContext = createContext<SettingsContextValue | null>(null);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(() => loadSettings());
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+
+  useEffect(() => {
+    bindSystemPreferenceListeners(() => settingsRef.current);
+    return () => unbindSystemPreferenceListeners();
+  }, []);
 
   useEffect(() => {
     const handler = (event: Event) => {
       const detail = (event as CustomEvent<Settings>).detail;
-      if (detail?.version === 2) setSettings(detail);
+      if (detail?.version === 3) setSettings(detail);
     };
     window.addEventListener(SETTINGS_CHANGE_EVENT, handler);
     return () => window.removeEventListener(SETTINGS_CHANGE_EVENT, handler);
@@ -37,7 +48,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const updateSettings = useCallback((patch: Partial<Settings>) => {
     setSettings((prev) => {
-      const next = { ...prev, ...patch };
+      let next: Settings = { ...prev, ...patch };
+
+      if (patch.auditMinHours != null || patch.auditMaxHours != null) {
+        const audit = clampAuditHours(next.auditMinHours, next.auditMaxHours);
+        next = { ...next, ...audit };
+      }
+
+      if (patch.defaultLayout && patch.defaultLayout !== 'remember') {
+        next = { ...next, layout: patch.defaultLayout };
+      }
+
       applySettings(next);
       return next;
     });

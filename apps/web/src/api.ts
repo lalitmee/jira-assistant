@@ -65,7 +65,16 @@ export async function logout(): Promise<void> {
   await fetch('/api/logout', { method: 'POST', credentials: 'include' });
 }
 
-export function formatDuration(totalSeconds: number): string {
+export type DurationFormat = 'hm' | 'decimal';
+
+export function formatDuration(totalSeconds: number, format: DurationFormat = 'hm'): string {
+  if (format === 'decimal') {
+    const hours = totalSeconds / 3600;
+    if (hours === 0) return '0h';
+    const rounded = Math.round(hours * 10) / 10;
+    return `${rounded}h`;
+  }
+
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
   if (h === 0 && m === 0) return '0h';

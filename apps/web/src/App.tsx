@@ -8,6 +8,7 @@ import { DayDrawer } from './components/DayDrawer';
 import { SettingsPage } from './components/SettingsPage';
 import { Button } from './components/ui/Button';
 import { useSettings } from './SettingsContext';
+import { auditConfigFromSettings } from './settings';
 import { useAuth } from './hooks/useAuth';
 import { useCalendarNavigation } from './hooks/useCalendarNavigation';
 import { useWorklogs } from './hooks/useWorklogs';
@@ -29,7 +30,16 @@ type AppView = 'calendar' | 'settings';
 export function App() {
   const { settings, updateSettings } = useSettings();
   const layout = settings.layout;
-  const { weekStart, weekWindowWeeks, showLegend, showFutureDays, weekSwipeEnabled } = settings;
+  const {
+    weekStart,
+    weekWindowWeeks,
+    showLegend,
+    showFutureDays,
+    weekSwipeEnabled,
+    monthSwipeEnabled,
+    durationFormat,
+  } = settings;
+  const audit = auditConfigFromSettings(settings);
 
   const [view, setView] = useState<AppView>('calendar');
   const [todayAnimating, setTodayAnimating] = useState(false);
@@ -83,6 +93,8 @@ export function App() {
     layout,
     weekStart,
     weekWindowWeeks,
+    startupRange: settings.startupRange,
+    showFutureDays,
     authChecked,
     meExists: me !== null,
     clearAuth,
@@ -216,6 +228,9 @@ export function App() {
       showLegend={showLegend}
       loading={calendarLoading}
       totalSeconds={data ? displayTotalSeconds : null}
+      auditMinHours={audit.minHours}
+      auditMaxHours={audit.maxHours}
+      durationFormat={durationFormat}
     />
   );
 
@@ -288,6 +303,9 @@ export function App() {
             blockingLoad={monthBlockingLoad}
             weekStart={weekStart}
             showFutureDays={showFutureDays}
+            monthSwipeEnabled={monthSwipeEnabled}
+            audit={audit}
+            durationFormat={durationFormat}
             canGoNext={canGoNextMonth(from)}
             onSelect={openDay}
             onFocusMonth={(anchorIso) => {
@@ -309,6 +327,8 @@ export function App() {
             visibleWeeks={weekWindowWeeks}
             showFutureDays={showFutureDays}
             weekSwipeEnabled={weekSwipeEnabled}
+            audit={audit}
+            durationFormat={durationFormat}
             onSelect={openDay}
             onFocusWeek={focusWeek}
             onResetToToday={goToday}

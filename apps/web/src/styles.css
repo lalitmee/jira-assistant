@@ -861,6 +861,10 @@ a:hover {
   transition: transform var(--week-page-transition-ms, 320ms) cubic-bezier(0.33, 1, 0.68, 1);
 }
 
+[data-reduced-motion='true'] .week-track.is-animating {
+  transition: none;
+}
+
 .week-page {
   flex: 0 0 auto;
   box-sizing: border-box;
@@ -1334,6 +1338,11 @@ a:hover {
   .drawer {
     transition: none;
   }
+}
+
+[data-reduced-motion='true'] .drawer-backdrop,
+[data-reduced-motion='true'] .drawer {
+  transition: none;
 }
 
 .drawer-header {

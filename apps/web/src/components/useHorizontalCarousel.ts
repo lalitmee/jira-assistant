@@ -29,6 +29,7 @@ export function flyDurationMs(pageDistance: number): number {
 
 function prefersReducedMotion(): boolean {
   if (typeof window === 'undefined') return false;
+  if (document.documentElement.getAttribute('data-reduced-motion') === 'true') return true;
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
