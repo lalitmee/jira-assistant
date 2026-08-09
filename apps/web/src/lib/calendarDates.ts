@@ -86,6 +86,37 @@ export function shouldPrefetchEarlierWeeks(
   return idx >= 0 && idx <= edgeWeeks;
 }
 
+export function shouldPrefetchLaterWeeks(
+  focusIso: string,
+  rangeFrom: string,
+  rangeTo: string,
+  weekStart: WeekStart,
+  edgeWeeks = WEEK_PREFETCH_EDGE_WEEKS,
+): boolean {
+  const weeks = weekStartsInRange(rangeFrom, rangeTo, weekStart);
+  const idx = weekFocusIndexInRange(focusIso, rangeFrom, rangeTo, weekStart);
+  if (idx < 0 || weeks.length === 0) return false;
+  return idx >= weeks.length - 1 - edgeWeeks;
+}
+
+/** Days after the visible window through the end of the selected range (or prefetch cap). */
+export function laterWeekPrefetchChunk(
+  focusIso: string,
+  rangeFrom: string,
+  rangeTo: string,
+  weekStart: WeekStart = 'sunday',
+  windowWeeks: WeekWindowWeeks = 1,
+): { from: string; to: string } | null {
+  const visible = visibleWeekBounds(focusIso, weekStart, windowWeeks);
+  const chunkFrom = addDaysIso(visible.to, 1);
+  if (chunkFrom > rangeTo) return null;
+
+  const capTo = addDaysIso(chunkFrom, WEEK_PREFETCH_WEEKS * 7 - 1);
+  const chunkTo = capTo > rangeTo ? rangeTo : capTo;
+  if (chunkFrom > chunkTo) return null;
+  return { from: chunkFrom, to: chunkTo };
+}
+
 /** One API-safe chunk (≤84 days) to load immediately before the earliest loaded week. */
 export function earlierWeekPrefetchChunk(
   loadedRangeFrom: string,
@@ -205,6 +236,22 @@ export function visibleWeekBounds(
   const { from } = weekContaining(starts[0], weekStart);
   const { to } = weekContaining(starts[starts.length - 1], weekStart);
   return { from, to: to > today ? today : to };
+}
+
+/** Current calendar week, capped at today. */
+export function currentWeekRange(weekStart: WeekStart = 'sunday'): { from: string; to: string } {
+  const today = toIso(new Date());
+  const { from, to } = weekContaining(today, weekStart);
+  return { from, to: to > today ? today : to };
+}
+
+/** Full previous calendar week. */
+export function lastWeekRange(weekStart: WeekStart = 'sunday'): { from: string; to: string } {
+  const today = toIso(new Date());
+  const currentStart = weekContaining(today, weekStart).from;
+  const lastWeekStart = shiftWeekAnchor(currentStart, -1);
+  const { from, to } = weekContaining(lastWeekStart, weekStart);
+  return { from, to };
 }
 
 /** Default week-mode range: current week, or previous + current when window is 2. */

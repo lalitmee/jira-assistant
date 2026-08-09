@@ -14,7 +14,9 @@ import {
   visibleWeekBounds,
   weekContaining,
   earlierWeekPrefetchChunk,
+  laterWeekPrefetchChunk,
   shouldPrefetchEarlierWeeks,
+  shouldPrefetchLaterWeeks,
   clampWeekWindowStart,
   weeksOnWindow,
   defaultWeekRange,
@@ -275,6 +277,18 @@ export function useWorklogs({
     if (from > chunk.from) setFrom(chunk.from);
     void prefetchRange(chunk.from, chunk.to);
   }, [layout, data, weekFocus, weekStart, from, prefetchRange, setFrom]);
+
+  // Sync prefetch later weeks (trailing edge of selected range)
+  useEffect(() => {
+    if (layout !== 'week' || !data) return;
+
+    if (!shouldPrefetchLaterWeeks(weekFocus, from, to, weekStart)) return;
+
+    const chunk = laterWeekPrefetchChunk(weekFocus, from, to, weekStart, weekWindowWeeks);
+    if (!chunk) return;
+
+    void prefetchRange(chunk.from, chunk.to);
+  }, [layout, data, weekFocus, weekStart, weekWindowWeeks, from, to, prefetchRange]);
 
   // Sync month view prefetch
   useEffect(() => {
