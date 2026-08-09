@@ -1,3 +1,5 @@
+import { toIso } from './lib/calendarDates';
+
 export type Me = {
   accountId: string;
   displayName: string;
@@ -73,10 +75,7 @@ export function formatDuration(totalSeconds: number): string {
 }
 
 export function toIsoDate(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  return toIso(d);
 }
 
 export function defaultRange(): { from: string; to: string } {
