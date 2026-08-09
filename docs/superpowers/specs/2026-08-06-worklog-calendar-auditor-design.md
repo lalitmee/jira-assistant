@@ -82,7 +82,6 @@ Logout ──────────────────────── 
 ATLASSIAN_CLIENT_ID=
 ATLASSIAN_CLIENT_SECRET=
 ATLASSIAN_REDIRECT_URI=http://localhost:8888/auth/callback
-SESSION_SECRET=
 API_PORT=8888
 WEB_ORIGIN=http://localhost:5173
 ```

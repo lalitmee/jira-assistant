@@ -15,7 +15,7 @@ Personal localhost app to audit your Jira Cloud worklogs on a calendar.
    - `read:jira-user`
    - `offline_access`
 5. Copy Client ID + Secret from Settings.
-6. Copy `.env.example` to `.env` and fill values (`SESSION_SECRET` via `openssl rand -hex 32`).
+6. Copy `.env.example` to `.env` and fill in your Atlassian OAuth values.
 
 ## Run
 

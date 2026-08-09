@@ -1,11 +1,8 @@
 import type { DayBucket } from '../api';
-import { formatDuration, MAX_RANGE_DAYS, spanDays } from '../api';
+import { formatDuration } from '../api';
 import type { WeekStart, WeekWindowWeeks } from '../settings';
 
 export type CalendarLayout = 'week' | 'month';
-
-/** @deprecated Migrated to ja_settings; kept for type re-exports only. */
-export const LAYOUT_STORAGE_KEY = 'ja_calendar_layout';
 
 export function hoursStatus(seconds: number, isWeekend: boolean): 'ok' | 'under' | 'over' | 'skip' {
   if (isWeekend) return 'skip';
@@ -25,22 +22,6 @@ export function toIso(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
-}
-
-export function eachDateInclusive(from: string, to: string): string[] {
-  const out: string[] = [];
-  const cur = parseLocal(from);
-  const end = parseLocal(to);
-  while (cur.getTime() <= end.getTime()) {
-    out.push(toIso(cur));
-    cur.setDate(cur.getDate() + 1);
-  }
-  return out;
-}
-
-/** Sunday=0 … Saturday=6 (matches `Date#getDay`). */
-export function sundayIndex(d: Date): number {
-  return d.getDay();
 }
 
 /** Days since the start of the week containing `d`. */
@@ -72,8 +53,6 @@ export function weekdayLabels(weekStart: WeekStart): string[] {
   if (weekStart === 'sunday') return base;
   return [...base.slice(1), base[0]];
 }
-
-export const WEEK_WINDOW_WEEKS = 12;
 
 export function shiftWeekAnchor(anchorIso: string, deltaWeeks: number): string {
   const d = parseLocal(anchorIso);
@@ -117,10 +96,6 @@ export function shouldPrefetchEarlierWeeks(
   return idx >= 0 && idx <= edgeWeeks;
 }
 
-export function extendRangeBackward(rangeFrom: string, weeks = WEEK_WINDOW_WEEKS): string {
-  return shiftWeekAnchor(rangeFrom, -weeks);
-}
-
 /** One API-safe chunk (≤84 days) to load immediately before the earliest loaded week. */
 export function earlierWeekPrefetchChunk(
   loadedRangeFrom: string,
@@ -139,49 +114,6 @@ export function addDaysIso(iso: string, days: number): string {
   return toIso(d);
 }
 
-/** ISO of the 1st of the month that "owns" this week (Wednesday of Sun–Sat week). */
-export function monthStartForWeek(weekStartIso: string): string {
-  const mid = parseLocal(addDaysIso(weekStartIso, 3));
-  return toIso(new Date(mid.getFullYear(), mid.getMonth(), 1));
-}
-
-/**
- * 12-week window for Week layout.
- * Prefer last 12 weeks ending at the current week when `focus` is inside that range;
- * otherwise start at the focus Sunday and extend forward (capped at current week).
- */
-export function weekWindowForFocus(
-  focusIso: string,
-  weekStart: WeekStart = 'sunday',
-): {
-  from: string;
-  to: string;
-  weekStarts: string[];
-} {
-  const today = toIso(new Date());
-  const focusStart = weekContaining(focusIso, weekStart).from;
-  const currentStart = weekContaining(today, weekStart).from;
-  const defaultStart = shiftWeekAnchor(currentStart, -(WEEK_WINDOW_WEEKS - 1));
-
-  const start =
-    focusStart >= defaultStart && focusStart <= currentStart ? defaultStart : focusStart;
-
-  const weekStarts: string[] = [];
-  for (let i = 0; i < WEEK_WINDOW_WEEKS; i++) {
-    const sun = shiftWeekAnchor(start, i);
-    if (sun > currentStart) break;
-    weekStarts.push(sun);
-  }
-
-  if (weekStarts.length === 0) weekStarts.push(currentStart);
-
-  const from = weekStarts[0];
-  const lastStart = weekStarts[weekStarts.length - 1];
-  const lastSat = weekContaining(lastStart, weekStart).to;
-  const to = lastSat > today ? today : lastSat;
-  return { from, to, weekStarts };
-}
-
 export function isCurrentWeek(focusStartIso: string, weekStart: WeekStart = 'sunday'): boolean {
   const today = toIso(new Date());
   return weekContaining(today, weekStart).from === focusStartIso;
@@ -196,15 +128,6 @@ export function weeksOnWindow(
   const start = weekContaining(windowStartIso, weekStart).from;
   if (windowWeeks === 1) return [start];
   return [start, shiftWeekAnchor(start, 1)];
-}
-
-/** @deprecated Use weeksOnWindow(windowStart, weekStart, visibleWeeks). */
-export function visibleWeekStarts(
-  windowStartIso: string,
-  weekStart: WeekStart,
-  visibleWeeks: WeekWindowWeeks,
-): string[] {
-  return weeksOnWindow(windowStartIso, weekStart, visibleWeeks);
 }
 
 /** Carousel page keys for 2-week mode: non-overlapping pairs stepping by 2 weeks. */
@@ -307,11 +230,6 @@ export function defaultWeekRange(
   return { from, to: weekEnd > today ? today : weekEnd };
 }
 
-/** @deprecated Use defaultWeekRange(weekStart, 1) */
-export function currentWeekRange(weekStart: WeekStart = 'sunday'): { from: string; to: string } {
-  return defaultWeekRange(weekStart, 1);
-}
-
 /** Carousel window start when expanding backward before the loaded range. */
 export function weekWindowStartForFocus(
   windowStartIso: string,
@@ -320,16 +238,6 @@ export function weekWindowStartForFocus(
 ): string {
   const start = weekContaining(windowStartIso, weekStart).from;
   return shiftWeekAnchor(start, windowWeeks === 2 ? -2 : -1);
-}
-
-/** Inclusive bounds for the week containing `focusIso`, capped at today. */
-export function focusedWeekBounds(
-  focusIso: string,
-  weekStart: WeekStart = 'sunday',
-): { from: string; to: string } {
-  const today = toIso(new Date());
-  const { from, to } = weekContaining(focusIso, weekStart);
-  return { from, to: to > today ? today : to };
 }
 
 export type LoadedSegment = { from: string; to: string };
@@ -373,36 +281,6 @@ export function isRangeCoveredBySegments(
     cursor = addDaysIso(seg.to, 1);
   }
   return true;
-}
-
-/** @deprecated Prefer isRangeCoveredBySegments; merged cache bounds can span unfetched gaps. */
-export function isRangeCoveredByCache(
-  cached: { from: string; to: string },
-  from: string,
-  to: string,
-): boolean {
-  return cached.from <= from && cached.to >= to;
-}
-
-export function weekLabelParts(
-  anchorIso: string,
-  weekStart: WeekStart = 'sunday',
-): { year: string; range: string } {
-  const { from, to } = weekContaining(anchorIso, weekStart);
-  const a = parseLocal(from);
-  const b = parseLocal(to);
-  const year =
-    a.getFullYear() === b.getFullYear()
-      ? String(a.getFullYear())
-      : `${a.getFullYear()} – ${b.getFullYear()}`;
-  const left = a.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  const right = b.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  return { year, range: `${left} – ${right}` };
-}
-
-export function weekLabel(anchorIso: string, weekStart: WeekStart = 'sunday'): string {
-  const { year, range } = weekLabelParts(anchorIso, weekStart);
-  return year.includes('–') ? `${range} (${year})` : `${range} ${year}`;
 }
 
 /** Keep focus when still in range; otherwise snap to the last week that fits. */
@@ -463,71 +341,6 @@ export function canGoNextWeekWindow(
   const nextWindow = shiftWeekAnchor(weekContaining(windowStartIso, weekStart).from, 2);
   const lastStart = weekContaining(rangeTo, weekStart).from;
   return nextWindow <= lastStart;
-}
-
-/** Month → week: preserve range when it fits API limits; otherwise clip around the focus week. */
-export function clipRangeToMaxDaysCenteredOn(
-  from: string,
-  to: string,
-  focusIso: string,
-  maxDays = MAX_RANGE_DAYS,
-): { from: string; to: string } {
-  if (spanDays(from, to) <= maxDays) return { from, to };
-
-  const today = toIso(new Date());
-  const before = Math.floor((maxDays - 1) / 2);
-  let newFrom = addDaysIso(focusIso, -before);
-  let newTo = addDaysIso(focusIso, maxDays - 1 - before);
-
-  if (newFrom < from) {
-    newFrom = from;
-    newTo = addDaysIso(from, maxDays - 1);
-  }
-  if (newTo > to) {
-    newTo = to;
-    newFrom = addDaysIso(to, -(maxDays - 1));
-  }
-  if (newTo > today) newTo = today;
-  if (newFrom > newTo) newFrom = newTo;
-
-  return { from: newFrom, to: newTo };
-}
-
-export function weekFocusForLayoutSwitch(
-  rangeFrom: string,
-  rangeTo: string,
-  weekStart: WeekStart = 'sunday',
-): string {
-  const today = toIso(new Date());
-  if (today >= rangeFrom && today <= rangeTo) {
-    return weekContaining(today, weekStart).from;
-  }
-  return weekContaining(rangeFrom, weekStart).from;
-}
-
-/** Month → week: keep the active range when possible; clip only when above API limits. */
-export function weekRangeForMonthSwitch(
-  from: string,
-  to: string,
-  focusIso: string,
-  maxDays = MAX_RANGE_DAYS,
-): { from: string; to: string } {
-  return clipRangeToMaxDaysCenteredOn(from, to, focusIso, maxDays);
-}
-
-export function readStoredLayout(): CalendarLayout {
-  try {
-    const raw = localStorage.getItem('ja_settings');
-    if (raw) {
-      const parsed = JSON.parse(raw) as { layout?: string };
-      if (parsed.layout === 'week' || parsed.layout === 'month') return parsed.layout;
-    }
-    const v = localStorage.getItem(LAYOUT_STORAGE_KEY);
-    if (v === 'week' || v === 'month') return v;
-  } catch {
-    // ignore
-  }
-  return 'month';
 }
 
 type DayChipProps = {

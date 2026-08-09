@@ -21,12 +21,7 @@ function MoonIcon() {
   );
 }
 
-type Props = {
-  /** Render as a full-width menu row instead of the round header button. */
-  variant?: 'icon' | 'menu';
-};
-
-export function ThemeToggle({ variant = 'icon' }: Props) {
+export function ThemeToggle() {
   const { settings, updateSettings } = useSettings();
   const theme = settings.theme;
 
@@ -36,22 +31,6 @@ export function ThemeToggle({ variant = 'icon' }: Props) {
   };
 
   const nextLabel = theme === 'light' ? 'Dark' : 'Light';
-
-  if (variant === 'menu') {
-    return (
-      <button
-        type="button"
-        className="user-menu-item user-menu-item-theme"
-        role="menuitem"
-        onClick={toggle}
-        aria-label={`Switch to ${nextLabel} theme`}
-      >
-        <span className="user-menu-item-icon" aria-hidden>
-          {theme === 'light' ? <MoonIcon /> : <SunIcon />}
-        </span>
-      </button>
-    );
-  }
 
   return (
     <button

@@ -46,7 +46,6 @@ export function useAuth() {
     me,
     authChecked,
     error,
-    setError,
     clearAuth,
     handleLogout,
   };

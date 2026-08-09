@@ -311,7 +311,6 @@ export function useWorklogs({
     setLoadedSegments,
     setData,
     displayTotalSeconds,
-    load,
     prefetchRange,
     syncMonthData,
     applyMonthRange,

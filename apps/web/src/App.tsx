@@ -300,8 +300,8 @@ export function App() {
           <WeekView
             ref={weekViewRef}
             focusSunday={weekFocusAnchor}
-            rangeFrom={layout === 'week' ? from : data?.from ?? from}
-            rangeTo={layout === 'week' ? to : data?.to ?? to}
+            rangeFrom={from}
+            rangeTo={to}
             days={data?.days ?? {}}
             selected={selected}
             loading={weekFetching}

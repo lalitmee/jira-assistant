@@ -114,18 +114,6 @@ export function groupWorklogsByDay(
   return { totalSeconds, days };
 }
 
-export function eachDateInclusive(from: string, to: string): string[] {
-  const out: string[] = [];
-  const cur = parseIsoDate(from);
-  const end = parseIsoDate(to);
-  if (!cur || !end) return out;
-  while (cur.getTime() <= end.getTime()) {
-    out.push(cur.toISOString().slice(0, 10));
-    cur.setUTCDate(cur.getUTCDate() + 1);
-  }
-  return out;
-}
-
 export function formatDuration(totalSeconds: number): string {
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
