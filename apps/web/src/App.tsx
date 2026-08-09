@@ -304,7 +304,7 @@ export function App() {
             rangeTo={to}
             days={data?.days ?? {}}
             selected={selected}
-            loading={weekFetching}
+            blockingLoad={weekBlockingLoad}
             weekStart={weekStart}
             visibleWeeks={weekWindowWeeks}
             showFutureDays={showFutureDays}

@@ -136,7 +136,8 @@ type WeekProps = {
   rangeTo: string;
   days: Record<string, DayBucket>;
   selected: string | null;
-  loading?: boolean;
+  /** Blocks carousel interaction for the initial load only — not background prefetch. */
+  blockingLoad?: boolean;
   weekStart: WeekStart;
   visibleWeeks?: WeekWindowWeeks;
   showFutureDays: boolean;
@@ -256,7 +257,7 @@ export const WeekView = forwardRef<WeekViewHandle, WeekProps>(function WeekView(
     rangeTo,
     days,
     selected,
-    loading,
+    blockingLoad,
     weekStart,
     visibleWeeks = 1,
     showFutureDays,
@@ -285,7 +286,7 @@ export const WeekView = forwardRef<WeekViewHandle, WeekProps>(function WeekView(
     pageKeys: weekStarts,
     focusKey: weekContaining(focusSunday, weekStart).from,
     swipeEnabled: weekSwipeEnabled,
-    loading,
+    loading: blockingLoad,
     onFocusPage: onFocusWeek,
     onFocusEarlier: focusEarlierWeek,
   });
@@ -338,7 +339,7 @@ export const WeekView = forwardRef<WeekViewHandle, WeekProps>(function WeekView(
     <CalendarCarouselShell
       wrapClassName={wrapClassName}
       weekStart={weekStart}
-      loading={loading}
+      loading={blockingLoad}
       ready={carousel.ready}
       ariaLabel="Week view"
       listAriaLabel="Week pages"
