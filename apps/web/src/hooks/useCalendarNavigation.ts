@@ -4,21 +4,33 @@ import {
   weekContaining,
 } from '../components/DayChip';
 import {
-  rangeForStartup,
-  weekFocusForStartup,
+  loadSettings,
+  rangeForLayout,
+  weekFocusForLayout,
   type WeekStart,
   type WeekWindowWeeks,
 } from '../settings';
 
 export function useCalendarNavigation(weekStart: WeekStart, weekWindowWeeks: WeekWindowWeeks) {
-  const initial = rangeForStartup('month-to-date', weekStart, weekWindowWeeks, true);
-  const [from, setFrom] = useState(initial.from);
-  const [to, setTo] = useState(initial.to);
+  const [initial] = useState(() => {
+    const settings = loadSettings();
+    return {
+      range: rangeForLayout(
+        settings.layout,
+        settings.startupRange,
+        weekStart,
+        weekWindowWeeks,
+        settings.showFutureDays,
+      ),
+      focus: weekFocusForLayout(weekStart, weekWindowWeeks),
+    };
+  });
+
+  const [from, setFrom] = useState(initial.range.from);
+  const [to, setTo] = useState(initial.range.to);
   const [selected, setSelected] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [weekFocusAnchor, setWeekFocusAnchor] = useState(() =>
-    weekFocusForStartup('month-to-date', weekStart, weekWindowWeeks),
-  );
+  const [weekFocusAnchor, setWeekFocusAnchor] = useState(initial.focus);
   const [prevWeekStart, setPrevWeekStart] = useState(weekStart);
 
   if (weekStart !== prevWeekStart) {
@@ -40,19 +52,6 @@ export function useCalendarNavigation(weekStart: WeekStart, weekWindowWeeks: Wee
     setSelected(null);
   }, []);
 
-  const applyStartupRange = useCallback(
-    (
-      startupRange: Parameters<typeof rangeForStartup>[0],
-      showFutureDays: boolean,
-    ) => {
-      const range = rangeForStartup(startupRange, weekStart, weekWindowWeeks, showFutureDays);
-      setFrom(range.from);
-      setTo(range.to);
-      setWeekFocusAnchor(weekFocusForStartup(startupRange, weekStart, weekWindowWeeks));
-    },
-    [weekStart, weekWindowWeeks],
-  );
-
   return {
     from,
     to,
@@ -64,6 +63,5 @@ export function useCalendarNavigation(weekStart: WeekStart, weekWindowWeeks: Wee
     setWeekFocusAnchor,
     openDay,
     closeDay,
-    applyStartupRange,
   };
 }

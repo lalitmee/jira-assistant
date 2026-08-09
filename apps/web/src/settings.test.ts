@@ -8,6 +8,7 @@ import {
   formatAuditBandLabel,
   formatOverAuditLabel,
   formatUnderAuditLabel,
+  rangeForLayout,
   rangeForStartup,
   resolveReducedMotion,
   resolveTheme,
@@ -45,9 +46,10 @@ describe('settings v3 helpers', () => {
     expect(resolveReducedMotion('no-preference')).toBe(false);
   });
 
-  it('computes startup range for current week', () => {
-    const range = rangeForStartup('current-week', 'sunday', 1, true);
-    expect(range.from <= range.to).toBe(true);
+  it('uses current week range for week layout regardless of startup range', () => {
+    const range = rangeForLayout('week', 'month-to-date', 'sunday', 1, true);
+    const startup = rangeForStartup('month-to-date', 'sunday', 1, true);
+    expect(range.from >= startup.from).toBe(true);
   });
 });
 

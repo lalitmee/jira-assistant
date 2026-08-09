@@ -225,8 +225,19 @@ export function rangeForStartup(
   return defaultRange();
 }
 
-export function weekFocusForStartup(
-  _startupRange: StartupRange,
+/** Loaded range for the active calendar layout. Week view always uses the current week window. */
+export function rangeForLayout(
+  layout: CalendarLayout,
+  startupRange: StartupRange,
+  weekStart: WeekStart,
+  weekWindowWeeks: WeekWindowWeeks,
+  showFutureDays: boolean,
+): { from: string; to: string } {
+  if (layout === 'week') return defaultWeekRange(weekStart, weekWindowWeeks);
+  return rangeForStartup(startupRange, weekStart, weekWindowWeeks, showFutureDays);
+}
+
+export function weekFocusForLayout(
   weekStart: WeekStart,
   weekWindowWeeks: WeekWindowWeeks,
 ): string {

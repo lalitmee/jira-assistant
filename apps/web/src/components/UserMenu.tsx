@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Me } from '../api';
-import { ThemePillToggle } from './ThemePillToggle';
 import { Divider } from './ui/Divider';
 
 type Props = {
@@ -88,10 +87,6 @@ export function UserMenu({ me, onLogout, onOpenSettings }: Props) {
             </div>
           </div>
           <Divider orientation="horizontal" inset />
-          <div className="user-menu-theme-row" role="none">
-            <span className="user-menu-theme-label">Theme</span>
-            <ThemePillToggle />
-          </div>
           {onOpenSettings ? (
             <button
               type="button"

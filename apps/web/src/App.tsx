@@ -119,8 +119,6 @@ export function App() {
         weekWindowWeeks,
       );
 
-      setWeekFocusAnchor(windowStart);
-
       let newFrom = from;
       let newTo = to;
 
@@ -131,6 +129,7 @@ export function App() {
       if (weekFrom < newFrom) newFrom = weekFrom;
       if (weekTo > newTo) newTo = weekTo;
 
+      setWeekFocusAnchor(windowStart);
       if (newFrom !== from) setFrom(newFrom);
       if (newTo !== to) setTo(newTo);
 

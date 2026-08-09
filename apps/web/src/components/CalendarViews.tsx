@@ -289,13 +289,15 @@ export const WeekView = forwardRef<WeekViewHandle, WeekProps>(function WeekView(
   },
   ref,
 ) {
-  const weekStarts = useMemo(
-    () =>
+  const weekStarts = useMemo(() => {
+    const focusStart = weekContaining(focusSunday, weekStart).from;
+    const base =
       visibleWeeks === 2
         ? twoWeekWindowStartsInRange(rangeFrom, rangeTo, weekStart)
-        : weekStartsInRange(rangeFrom, rangeTo, weekStart),
-    [rangeFrom, rangeTo, weekStart, visibleWeeks],
-  );
+        : weekStartsInRange(rangeFrom, rangeTo, weekStart);
+    if (base.includes(focusStart)) return base;
+    return [...base, focusStart].sort();
+  }, [rangeFrom, rangeTo, weekStart, visibleWeeks, focusSunday]);
 
   const focusEarlierWeek = () => {
     const first = weekStarts[0];

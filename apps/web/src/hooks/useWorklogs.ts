@@ -25,8 +25,8 @@ import {
 } from '../components/DayChip';
 import type { WeekStart, WeekWindowWeeks, StartupRange } from '../settings';
 import {
-  rangeForStartup,
-  weekFocusForStartup,
+  rangeForLayout,
+  weekFocusForLayout,
 } from '../settings';
 
 type UseWorklogsProps = {
@@ -145,8 +145,14 @@ export function useWorklogs({
   useEffect(() => {
     if (!authChecked || !meExists || hasInitializedRef.current) return;
     hasInitializedRef.current = true;
-    const range = rangeForStartup(startupRange, weekStart, weekWindowWeeks, showFutureDays);
-    const windowStart = weekFocusForStartup(startupRange, weekStart, weekWindowWeeks);
+    const range = rangeForLayout(
+      layout,
+      startupRange,
+      weekStart,
+      weekWindowWeeks,
+      showFutureDays,
+    );
+    const windowStart = weekFocusForLayout(weekStart, weekWindowWeeks);
     if (layout === 'week') {
       setWeekFocusAnchor(windowStart);
     }
@@ -238,8 +244,14 @@ export function useWorklogs({
 
   const resetToTodayView = useCallback(
     (targetLayout: CalendarLayout) => {
-      const range = rangeForStartup(startupRange, weekStart, weekWindowWeeks, showFutureDays);
-      const windowStart = weekFocusForStartup(startupRange, weekStart, weekWindowWeeks);
+      const range = rangeForLayout(
+        targetLayout,
+        startupRange,
+        weekStart,
+        weekWindowWeeks,
+        showFutureDays,
+      );
+      const windowStart = weekFocusForLayout(weekStart, weekWindowWeeks);
       if (targetLayout === 'week') {
         setWeekFocusAnchor(windowStart);
       }
