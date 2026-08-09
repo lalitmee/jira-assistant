@@ -217,6 +217,26 @@ a:hover {
   border-radius: 12px;
   box-shadow: var(--shadow);
   padding: 8px;
+  transform-origin: top right;
+  opacity: 0;
+  transform: scale(0.96) translateY(-4px);
+  pointer-events: none;
+  visibility: hidden;
+  transition:
+    opacity 200ms cubic-bezier(0.32, 0.72, 0, 1),
+    transform 200ms cubic-bezier(0.32, 0.72, 0, 1),
+    visibility 0s linear 200ms;
+}
+
+.user-menu-popover.open {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  pointer-events: auto;
+  visibility: visible;
+  transition:
+    opacity 200ms cubic-bezier(0.32, 0.72, 0, 1),
+    transform 200ms cubic-bezier(0.32, 0.72, 0, 1),
+    visibility 0s;
 }
 
 .user-menu-header {
@@ -319,6 +339,45 @@ a:hover {
 
 .user-menu-item:last-child:hover .user-menu-item-icon {
   color: var(--danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .user-menu-popover {
+    transition: none;
+  }
+}
+
+[data-reduced-motion='true'] .user-menu-popover {
+  transition: none;
+}
+
+.calendar-layout-shell {
+  view-transition-name: calendar-layout;
+}
+
+::view-transition-group(calendar-layout) {
+  animation-duration: 320ms;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+::view-transition-old(calendar-layout),
+::view-transition-new(calendar-layout) {
+  height: 100%;
+  overflow: clip;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(calendar-layout),
+  ::view-transition-old(calendar-layout),
+  ::view-transition-new(calendar-layout) {
+    animation: none !important;
+  }
+}
+
+[data-reduced-motion='true'] ::view-transition-group(calendar-layout),
+[data-reduced-motion='true'] ::view-transition-old(calendar-layout),
+[data-reduced-motion='true'] ::view-transition-new(calendar-layout) {
+  animation: none !important;
 }
 
 .theme-toggle-btn {

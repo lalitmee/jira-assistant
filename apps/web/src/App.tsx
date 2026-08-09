@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { runViewTransition } from './lib/viewTransition';
 import { Header } from './components/Header';
 import { Legend } from './components/Legend';
 import { RangeBar } from './components/RangeBar';
@@ -8,7 +9,7 @@ import { DayDrawer } from './components/DayDrawer';
 import { SettingsPage } from './components/SettingsPage';
 import { Button } from './components/ui/Button';
 import { useSettings } from './SettingsContext';
-import { auditConfigFromSettings } from './settings';
+import { auditConfigFromSettings, resolveReducedMotion } from './settings';
 import { useAuth } from './hooks/useAuth';
 import { useCalendarNavigation } from './hooks/useCalendarNavigation';
 import { useWorklogs } from './hooks/useWorklogs';
@@ -142,8 +143,11 @@ export function App() {
 
   const changeLayout = (next: CalendarLayout) => {
     if (next === layout) return;
-    updateSettings({ layout: next });
-    resetToTodayView(next);
+    const skipTransition = resolveReducedMotion(settings.reducedMotion);
+    runViewTransition(() => {
+      updateSettings({ layout: next });
+      resetToTodayView(next);
+    }, skipTransition);
   };
 
   const goToday = useCallback(() => {
@@ -293,46 +297,48 @@ export function App() {
           <LayoutSwitcher layout={layout} onChange={changeLayout} />
         </div>
 
-        {layout === 'month' ? (
-          <MonthView
-            ref={monthViewRef}
-            monthIso={from}
-            days={data?.days ?? {}}
-            selected={selected}
-            blockingLoad={monthBlockingLoad}
-            weekStart={weekStart}
-            showFutureDays={showFutureDays}
-            monthSwipeEnabled={monthSwipeEnabled}
-            audit={audit}
-            durationFormat={durationFormat}
-            canGoNext={canGoNextMonth(from)}
-            onSelect={openDay}
-            onFocusMonth={(anchorIso) => {
-              const d = new Date(`${anchorIso}T00:00:00`);
-              syncMonthData(monthRange(d.getFullYear(), d.getMonth()));
-            }}
-            onResetToToday={goToday}
-          />
-        ) : (
-          <WeekView
-            ref={weekViewRef}
-            focusSunday={weekFocusAnchor}
-            rangeFrom={from}
-            rangeTo={to}
-            days={data?.days ?? {}}
-            selected={selected}
-            blockingLoad={weekBlockingLoad}
-            weekStart={weekStart}
-            visibleWeeks={weekWindowWeeks}
-            showFutureDays={showFutureDays}
-            weekSwipeEnabled={weekSwipeEnabled}
-            audit={audit}
-            durationFormat={durationFormat}
-            onSelect={openDay}
-            onFocusWeek={focusWeek}
-            onResetToToday={goToday}
-          />
-        )}
+        <div className="calendar-layout-shell">
+          {layout === 'month' ? (
+            <MonthView
+              ref={monthViewRef}
+              monthIso={from}
+              days={data?.days ?? {}}
+              selected={selected}
+              blockingLoad={monthBlockingLoad}
+              weekStart={weekStart}
+              showFutureDays={showFutureDays}
+              monthSwipeEnabled={monthSwipeEnabled}
+              audit={audit}
+              durationFormat={durationFormat}
+              canGoNext={canGoNextMonth(from)}
+              onSelect={openDay}
+              onFocusMonth={(anchorIso) => {
+                const d = new Date(`${anchorIso}T00:00:00`);
+                syncMonthData(monthRange(d.getFullYear(), d.getMonth()));
+              }}
+              onResetToToday={goToday}
+            />
+          ) : (
+            <WeekView
+              ref={weekViewRef}
+              focusSunday={weekFocusAnchor}
+              rangeFrom={from}
+              rangeTo={to}
+              days={data?.days ?? {}}
+              selected={selected}
+              blockingLoad={weekBlockingLoad}
+              weekStart={weekStart}
+              visibleWeeks={weekWindowWeeks}
+              showFutureDays={showFutureDays}
+              weekSwipeEnabled={weekSwipeEnabled}
+              audit={audit}
+              durationFormat={durationFormat}
+              onSelect={openDay}
+              onFocusWeek={focusWeek}
+              onResetToToday={goToday}
+            />
+          )}
+        </div>
 
         {!calendarLoading && data && displayTotalSeconds === 0 ? (
           <p className="empty">No worklogs in this range.</p>

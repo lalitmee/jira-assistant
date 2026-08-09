@@ -66,60 +66,62 @@ export function UserMenu({ me, onLogout, onOpenSettings }: Props) {
         )}
       </button>
 
-      {open ? (
-        <div className="user-menu-popover" role="menu">
-          <div className="user-menu-header">
-            <div className="user-menu-avatar" aria-hidden>
-              {showImage ? (
-                <img
-                  className="user-avatar-img"
-                  src={me.avatarUrl!}
-                  alt=""
-                  referrerPolicy="no-referrer"
-                  onError={() => setFailedAvatarUrl(me.avatarUrl!)}
-                />
-              ) : (
-                <span className="user-avatar-initials">{initials}</span>
-              )}
-            </div>
-            <div className="user-menu-identity">
-              <div className="user-menu-name">{me.displayName}</div>
-              <div className="user-menu-site">{me.siteName}</div>
-            </div>
+      <div
+        className={`user-menu-popover${open ? ' open' : ''}`}
+        role="menu"
+        aria-hidden={!open}
+      >
+        <div className="user-menu-header">
+          <div className="user-menu-avatar" aria-hidden>
+            {showImage ? (
+              <img
+                className="user-avatar-img"
+                src={me.avatarUrl!}
+                alt=""
+                referrerPolicy="no-referrer"
+                onError={() => setFailedAvatarUrl(me.avatarUrl!)}
+              />
+            ) : (
+              <span className="user-avatar-initials">{initials}</span>
+            )}
           </div>
-          <Divider orientation="horizontal" inset />
-          {onOpenSettings ? (
-            <button
-              type="button"
-              className="user-menu-item"
-              role="menuitem"
-              onClick={() => {
-                setOpen(false);
-                onOpenSettings();
-              }}
-            >
-              <span className="user-menu-item-icon" aria-hidden>
-                <Settings />
-              </span>
-              Settings
-            </button>
-          ) : null}
+          <div className="user-menu-identity">
+            <div className="user-menu-name">{me.displayName}</div>
+            <div className="user-menu-site">{me.siteName}</div>
+          </div>
+        </div>
+        <Divider orientation="horizontal" inset />
+        {onOpenSettings ? (
           <button
             type="button"
             className="user-menu-item"
             role="menuitem"
             onClick={() => {
               setOpen(false);
-              onLogout();
+              onOpenSettings();
             }}
           >
             <span className="user-menu-item-icon" aria-hidden>
-              <LogOut />
+              <Settings />
             </span>
-            Sign out
+            Settings
           </button>
-        </div>
-      ) : null}
+        ) : null}
+        <button
+          type="button"
+          className="user-menu-item"
+          role="menuitem"
+          onClick={() => {
+            setOpen(false);
+            onLogout();
+          }}
+        >
+          <span className="user-menu-item-icon" aria-hidden>
+            <LogOut />
+          </span>
+          Sign out
+        </button>
+      </div>
     </div>
   );
 }
