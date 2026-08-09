@@ -92,6 +92,7 @@ export function useHorizontalCarousel({
   const pendingFlyRef = useRef<(() => void) | null>(null);
   const pendingStepRef = useRef<(() => void) | null>(null);
   const animatingRef = useRef(false);
+  const placedRef = useRef(false);
   const pageKeysRef = useRef(pageKeys);
   const focusKeyRef = useRef(focusKey);
   pageKeysRef.current = pageKeys;
@@ -265,40 +266,49 @@ export function useHorizontalCarousel({
   );
 
   useLayoutEffect(() => {
+    if (loading) {
+      placedRef.current = false;
+      setReady(false);
+      return;
+    }
+
     const el = viewportRef.current;
     if (!el) return;
 
-    let placed = false;
-
-    const place = (): boolean => {
+    const syncWidth = (): boolean => {
       const w = el.clientWidth;
       if (w === 0) return false;
       setPageWidth(w);
-      if (!placed) {
-        const idx = focusIndex(pageKeys, focusKey);
-        setIndex(idx);
-        setDragOffset(0);
-        setAnimating(false);
-        setReady(true);
-        placed = true;
-      }
       return true;
     };
 
-    place();
+    if (!placedRef.current) {
+      if (!syncWidth()) return;
+      const idx = focusIndex(pageKeysRef.current, focusKeyRef.current);
+      indexRef.current = idx;
+      setIndex(idx);
+      setDragOffset(0);
+      setAnimating(false);
+      setReady(true);
+      placedRef.current = true;
+      return;
+    }
+
+    syncWidth();
+  }, [loading, pageKeys, focusKey]);
+
+  useLayoutEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
 
     const ro = new ResizeObserver(() => {
       const w = el.clientWidth;
       if (w === 0) return;
-      if (!placed) {
-        place();
-        return;
-      }
       setPageWidth(w);
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [pageKeys, focusKey, loading]);
+  }, []);
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (!swipeEnabled || e.button !== 0 || loading) return;
