@@ -371,9 +371,12 @@ export function useHorizontalCarousel({
     const pendingFly = pendingFlyRef.current;
     if (pendingFly) {
       pendingFlyRef.current = null;
+      setAnimating(false);
+      pendingFly();
       setDragOffset(0);
       setTransitionMs(PAGE_TRANSITION_MS);
-      pendingFly();
+      internalNavRef.current = false;
+      return;
     }
 
     const pendingFocus = pendingFocusRef.current;

@@ -554,7 +554,7 @@ export const MonthView = forwardRef<MonthViewHandle, MonthProps>(function MonthV
           });
           return;
         }
-        carousel.flyByPages(delta, {
+        carousel.flyByPages(Math.sign(delta), {
           onComplete: () => {
             onResetToToday();
             onDone?.();
