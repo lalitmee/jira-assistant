@@ -137,6 +137,20 @@ export function monthDelta(fromAnchorIso: string, toAnchorIso: string): number {
   return (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
 }
 
+/** Inclusive month anchors from `fromAnchorIso` through `toAnchorIso`. */
+export function monthAnchorsSpan(fromAnchorIso: string, toAnchorIso: string): string[] {
+  const from = monthAnchor(fromAnchorIso);
+  const to = monthAnchor(toAnchorIso);
+  const delta = monthDelta(from, to);
+  if (delta === 0) return [from];
+  const step = delta > 0 ? 1 : -1;
+  const anchors: string[] = [];
+  for (let i = 0; i <= Math.abs(delta); i++) {
+    anchors.push(shiftMonthRange(from, step * i).from);
+  }
+  return anchors;
+}
+
 /** Current calendar month, capped at today. */
 export function currentMonthRange(): { from: string; to: string } {
   const today = new Date();

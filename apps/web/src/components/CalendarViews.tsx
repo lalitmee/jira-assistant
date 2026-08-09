@@ -2,12 +2,22 @@ import {
   forwardRef,
   memo,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
+  useRef,
+  useState,
   type CSSProperties,
   type ReactNode,
 } from 'react';
 import type { DayBucket } from '../api';
-import { monthAnchor, monthDelta, monthRange, monthWindowPages, toIsoDate } from '../api';
+import {
+  monthAnchor,
+  monthAnchorsSpan,
+  monthDelta,
+  monthRange,
+  monthWindowPages,
+  toIsoDate,
+} from '../api';
 import {
   DayChip,
   defaultWeekWindowStart,
@@ -508,12 +518,20 @@ export const MonthView = forwardRef<MonthViewHandle, MonthProps>(function MonthV
     canGoNext = true,
     onSelect,
     onFocusMonth,
-    onResetToToday,
   },
   ref,
 ) {
   const focusKey = monthAnchor(monthIso);
-  const monthPages = useMemo(() => monthWindowPages(focusKey), [focusKey]);
+  const [flySpanPages, setFlySpanPages] = useState<string[] | null>(null);
+  const flySpanPendingRef = useRef<{ todayAnchor: string; onDone?: () => void } | null>(null);
+  const flyToIndexRef = useRef<
+    (targetIndex: number, options?: { onComplete?: () => void }) => void
+  >(() => undefined);
+
+  const monthPages = useMemo(
+    () => flySpanPages ?? monthWindowPages(focusKey),
+    [flySpanPages, focusKey],
+  );
 
   const carousel = useHorizontalCarousel({
     pageKeys: monthPages,
@@ -525,6 +543,29 @@ export const MonthView = forwardRef<MonthViewHandle, MonthProps>(function MonthV
     resetIndexOnTransitionEnd: 1,
     onFocusPage: onFocusMonth,
   });
+
+  flyToIndexRef.current = carousel.flyToIndex;
+
+  useLayoutEffect(() => {
+    const pending = flySpanPendingRef.current;
+    if (!pending || !flySpanPages) return;
+    flySpanPendingRef.current = null;
+
+    const targetIdx = flySpanPages.indexOf(pending.todayAnchor);
+    if (targetIdx < 0) {
+      setFlySpanPages(null);
+      pending.onDone?.();
+      return;
+    }
+
+    flyToIndexRef.current(targetIdx, {
+      onComplete: () => {
+        setFlySpanPages(null);
+        onFocusMonth(pending.todayAnchor);
+        pending.onDone?.();
+      },
+    });
+  }, [flySpanPages, onFocusMonth]);
 
   useImperativeHandle(
     ref,
@@ -554,23 +595,16 @@ export const MonthView = forwardRef<MonthViewHandle, MonthProps>(function MonthV
           return;
         }
 
-        carousel.flyByPages(Math.sign(delta), {
-          durationPages: Math.abs(delta),
-          onComplete: () => {
-            onResetToToday();
-            onDone?.();
-          },
-        });
+        flySpanPendingRef.current = { todayAnchor, onDone };
+        setFlySpanPages(monthAnchorsSpan(focusKey, todayAnchor));
       },
     }),
     [
-      carousel.flyByPages,
       carousel.flyToIndex,
       carousel.index,
       focusKey,
       monthPages,
       onFocusMonth,
-      onResetToToday,
     ],
   );
 
