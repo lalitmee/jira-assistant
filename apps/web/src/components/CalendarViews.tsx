@@ -539,27 +539,39 @@ export const MonthView = forwardRef<MonthViewHandle, MonthProps>(function MonthV
           return;
         }
 
-        const direction = delta > 0 ? 1 : -1;
-        let stepsLeft = Math.abs(delta);
-
-        const step = () => {
-          if (stepsLeft <= 0) {
-            onResetToToday();
+        const targetIdx = monthPages.indexOf(todayAnchor);
+        if (targetIdx >= 0) {
+          if (targetIdx === carousel.index) {
             onDone?.();
             return;
           }
-          const moved = carousel.goToPage(1 + direction, {
+          carousel.flyToIndex(targetIdx, {
             onComplete: () => {
-              stepsLeft -= 1;
-              requestAnimationFrame(() => step());
+              onFocusMonth(todayAnchor);
+              onDone?.();
             },
           });
-          if (!moved) requestAnimationFrame(() => step());
-        };
-        step();
+          return;
+        }
+
+        carousel.flyByPages(Math.sign(delta), {
+          durationPages: Math.abs(delta),
+          onComplete: () => {
+            onResetToToday();
+            onDone?.();
+          },
+        });
       },
     }),
-    [carousel.goToPage, focusKey, onResetToToday],
+    [
+      carousel.flyByPages,
+      carousel.flyToIndex,
+      carousel.index,
+      focusKey,
+      monthPages,
+      onFocusMonth,
+      onResetToToday,
+    ],
   );
 
   return (

@@ -34,6 +34,8 @@ function prefersReducedMotion(): boolean {
 
 export type FlyOptions = {
   onComplete?: () => void;
+  /** Transition length when visual distance differs from timing (e.g. month window). */
+  durationPages?: number;
 };
 
 export function focusIndex(pageKeys: string[], focusKey: string): number {
@@ -90,6 +92,10 @@ export function useHorizontalCarousel({
   const pendingFlyRef = useRef<(() => void) | null>(null);
   const pendingStepRef = useRef<(() => void) | null>(null);
   const animatingRef = useRef(false);
+  const pageKeysRef = useRef(pageKeys);
+  const focusKeyRef = useRef(focusKey);
+  pageKeysRef.current = pageKeys;
+  focusKeyRef.current = focusKey;
 
   const [ready, setReady] = useState(false);
   const [index, setIndex] = useState(() => focusIndex(pageKeys, focusKey));
@@ -136,8 +142,10 @@ export function useHorizontalCarousel({
 
   const commitPage = useCallback(
     (nextIndex: number, options?: FlyOptions) => {
-      const clamped = clampIndex(nextIndex, pageKeys.length);
-      const key = pageKeys[clamped];
+      const keys = pageKeysRef.current;
+      const currentFocus = focusKeyRef.current;
+      const clamped = clampIndex(nextIndex, keys.length);
+      const key = keys[clamped];
       if (!key) {
         options?.onComplete?.();
         return;
@@ -148,7 +156,28 @@ export function useHorizontalCarousel({
       setDragOffset(0);
       setAnimating(true);
       if (options?.onComplete) pendingStepRef.current = options.onComplete;
-      if (key === focusKey) {
+
+      if (clamped === indexRef.current) {
+        if (key === currentFocus) {
+          animatingRef.current = false;
+          setAnimating(false);
+          internalNavRef.current = false;
+          options?.onComplete?.();
+          pendingStepRef.current = null;
+          return;
+        }
+        // Three-page window rotated: same slot index, new month key — no slide needed.
+        if (deferFocusNotify) {
+          pendingFocusRef.current = null;
+          onFocusPage?.(key);
+          if (resetIndexOnTransitionEnd != null) {
+            indexRef.current = resetIndexOnTransitionEnd;
+            setIndex(resetIndexOnTransitionEnd);
+            setDragOffset(0);
+          }
+        } else {
+          onFocusPage?.(key);
+        }
         animatingRef.current = false;
         setAnimating(false);
         internalNavRef.current = false;
@@ -156,13 +185,14 @@ export function useHorizontalCarousel({
         pendingStepRef.current = null;
         return;
       }
+
       if (deferFocusNotify) {
         pendingFocusRef.current = key;
         return;
       }
       onFocusPage?.(key);
     },
-    [deferFocusNotify, focusKey, onFocusPage, pageKeys],
+    [deferFocusNotify, onFocusPage, resetIndexOnTransitionEnd],
   );
 
   const bounceHome = useCallback(() => {
@@ -226,7 +256,7 @@ export function useHorizontalCarousel({
       }
       internalNavRef.current = true;
       pendingFlyRef.current = options?.onComplete ?? null;
-      setTransitionMs(flyDurationMs(pageDelta));
+      setTransitionMs(flyDurationMs(options?.durationPages ?? pageDelta));
       animatingRef.current = true;
       setAnimating(true);
       setDragOffset(-pageDelta * pageWidth);
@@ -405,6 +435,7 @@ export function useHorizontalCarousel({
       pendingFocusRef.current = null;
       onFocusPage?.(pendingFocus);
       if (resetIndexOnTransitionEnd != null) {
+        indexRef.current = resetIndexOnTransitionEnd;
         setIndex(resetIndexOnTransitionEnd);
         setDragOffset(0);
       }
