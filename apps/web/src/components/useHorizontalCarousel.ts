@@ -88,6 +88,7 @@ export function useHorizontalCarousel({
   const internalNavRef = useRef(false);
   const pendingFocusRef = useRef<string | null>(null);
   const pendingFlyRef = useRef<(() => void) | null>(null);
+  const pendingStepRef = useRef<(() => void) | null>(null);
 
   const [ready, setReady] = useState(false);
   const [index, setIndex] = useState(() => focusIndex(pageKeys, focusKey));
@@ -133,15 +134,25 @@ export function useHorizontalCarousel({
   const canNext = canGoNext && index < maxIndex;
 
   const commitPage = useCallback(
-    (nextIndex: number) => {
+    (nextIndex: number, options?: FlyOptions) => {
       const clamped = clampIndex(nextIndex, pageKeys.length);
       const key = pageKeys[clamped];
-      if (!key) return;
+      if (!key) {
+        options?.onComplete?.();
+        return;
+      }
       internalNavRef.current = true;
       setIndex(clamped);
       setDragOffset(0);
       setAnimating(true);
-      if (key === focusKey) return;
+      if (options?.onComplete) pendingStepRef.current = options.onComplete;
+      if (key === focusKey) {
+        setAnimating(false);
+        internalNavRef.current = false;
+        options?.onComplete?.();
+        pendingStepRef.current = null;
+        return;
+      }
       if (deferFocusNotify) {
         pendingFocusRef.current = key;
         return;
@@ -157,14 +168,17 @@ export function useHorizontalCarousel({
   }, []);
 
   const goToPage = useCallback(
-    (nextIndex: number) => {
+    (nextIndex: number, options?: FlyOptions) => {
       if (dragRef.current?.dragging || animating) return;
       if (nextIndex < 0) {
         onFocusEarlier?.();
         return;
       }
-      if (nextIndex > maxIndex) return;
-      commitPage(nextIndex);
+      if (nextIndex > maxIndex) {
+        options?.onComplete?.();
+        return;
+      }
+      commitPage(nextIndex, options);
     },
     [animating, commitPage, maxIndex, onFocusEarlier],
   );
@@ -387,6 +401,12 @@ export function useHorizontalCarousel({
         setIndex(resetIndexOnTransitionEnd);
         setDragOffset(0);
       }
+    }
+
+    const pendingStep = pendingStepRef.current;
+    if (pendingStep) {
+      pendingStepRef.current = null;
+      pendingStep();
     }
 
     internalNavRef.current = false;
