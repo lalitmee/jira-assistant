@@ -36,6 +36,8 @@ type Props = {
   onNextMonth?: () => void;
   /** Disables prev/next only; falls back to `loading` when omitted. */
   navLoading?: boolean;
+  /** Disables Today while a fly-to-today slide is running. */
+  todayAnimating?: boolean;
 };
 
 function toRange(from: string, to: string): DateRange {
@@ -168,7 +170,8 @@ export function RangeBar(props: Props) {
 
   const prevLabel = navMode === 'week' ? 'Previous week' : 'Previous month';
   const nextLabel = navMode === 'week' ? 'Next week' : 'Next month';
-  const todayDisabled = loading || (navMode === 'week' ? onCurrentWeek : onCurrentMonth);
+  const todayDisabled =
+    loading || props.todayAnimating || (navMode === 'week' ? onCurrentWeek : onCurrentMonth);
 
   return (
     <div className="range-bar range-bar-header">

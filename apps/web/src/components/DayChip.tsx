@@ -255,6 +255,32 @@ export function shiftWeekWindow(
   return shiftWeekAnchor(start, pageDelta * step);
 }
 
+/** Signed carousel page count between two window starts. */
+export function weekCarouselPageDelta(
+  fromWindowStart: string,
+  toWindowStart: string,
+  weekStart: WeekStart,
+  windowWeeks: WeekWindowWeeks,
+): number {
+  const from = weekContaining(fromWindowStart, weekStart).from;
+  const to = weekContaining(toWindowStart, weekStart).from;
+  const step = windowWeeks === 2 ? 2 : 1;
+  let cur = from;
+  let delta = 0;
+  if (to > from) {
+    while (cur < to) {
+      cur = shiftWeekAnchor(cur, step);
+      delta++;
+    }
+  } else if (to < from) {
+    while (cur > to) {
+      cur = shiftWeekAnchor(cur, -step);
+      delta--;
+    }
+  }
+  return delta;
+}
+
 /** Inclusive bounds for all weeks currently shown in week view. */
 export function visibleWeekBounds(
   windowStartIso: string,

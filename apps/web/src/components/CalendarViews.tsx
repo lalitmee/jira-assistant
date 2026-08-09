@@ -7,13 +7,15 @@ import {
   type ReactNode,
 } from 'react';
 import type { DayBucket } from '../api';
-import { monthAnchor, monthRange, monthWindowPages } from '../api';
+import { monthAnchor, monthDelta, monthRange, monthWindowPages, toIsoDate } from '../api';
 import {
   DayChip,
+  defaultWeekWindowStart,
   parseLocal,
   shiftWeekAnchor,
   toIso,
   twoWeekWindowStartsInRange,
+  weekCarouselPageDelta,
   weeksOnWindow,
   weekContaining,
   weekStartOffset,
@@ -131,6 +133,11 @@ type WeekProps = {
   weekSwipeEnabled: boolean;
   onSelect: (iso: string) => void;
   onFocusWeek: (sundayIso: string) => void;
+  onResetToToday: () => void;
+};
+
+export type WeekViewHandle = {
+  goToToday: (onDone?: () => void) => void;
 };
 
 function WeekRow({
@@ -232,20 +239,24 @@ function WeekPage({
   );
 }
 
-export function WeekView({
-  focusSunday,
-  rangeFrom,
-  rangeTo,
-  days,
-  selected,
-  loading,
-  weekStart,
-  visibleWeeks = 1,
-  showFutureDays,
-  weekSwipeEnabled,
-  onSelect,
-  onFocusWeek,
-}: WeekProps) {
+export const WeekView = forwardRef<WeekViewHandle, WeekProps>(function WeekView(
+  {
+    focusSunday,
+    rangeFrom,
+    rangeTo,
+    days,
+    selected,
+    loading,
+    weekStart,
+    visibleWeeks = 1,
+    showFutureDays,
+    weekSwipeEnabled,
+    onSelect,
+    onFocusWeek,
+    onResetToToday,
+  },
+  ref,
+) {
   const weekStarts = useMemo(
     () =>
       visibleWeeks === 2
@@ -268,6 +279,48 @@ export function WeekView({
     onFocusPage: onFocusWeek,
     onFocusEarlier: focusEarlierWeek,
   });
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      goToToday: (onDone) => {
+        const todayWindow = defaultWeekWindowStart(weekStart, visibleWeeks);
+        const targetIdx = weekStarts.indexOf(todayWindow);
+        if (targetIdx >= 0) {
+          if (targetIdx === carousel.index) {
+            onDone?.();
+            return;
+          }
+          carousel.flyToIndex(targetIdx, {
+            onComplete: () => {
+              onFocusWeek(todayWindow);
+              onDone?.();
+            },
+          });
+          return;
+        }
+        const currentFocus = weekContaining(focusSunday, weekStart).from;
+        const delta = weekCarouselPageDelta(currentFocus, todayWindow, weekStart, visibleWeeks);
+        carousel.flyByPages(delta, {
+          onComplete: () => {
+            onResetToToday();
+            onDone?.();
+          },
+        });
+      },
+    }),
+    [
+      carousel.flyByPages,
+      carousel.flyToIndex,
+      carousel.index,
+      focusSunday,
+      onFocusWeek,
+      onResetToToday,
+      visibleWeeks,
+      weekStart,
+      weekStarts,
+    ],
+  );
 
   const wrapClassName = `week-view-wrap${visibleWeeks === 2 ? ' week-view-wrap--dual' : ''}`;
 
@@ -313,7 +366,7 @@ export function WeekView({
       ))}
     </CalendarCarouselShell>
   );
-}
+});
 
 function MonthGrid({
   monthIso,
@@ -426,6 +479,7 @@ const MonthGridMemo = memo(MonthGrid, (prev, next) => {
 export type MonthViewHandle = {
   goPrev: () => void;
   goNext: () => void;
+  goToToday: (onDone?: () => void) => void;
 };
 
 type MonthProps = {
@@ -440,6 +494,7 @@ type MonthProps = {
   canGoNext?: boolean;
   onSelect: (iso: string) => void;
   onFocusMonth: (monthAnchorIso: string) => void;
+  onResetToToday: () => void;
 };
 
 export const MonthView = forwardRef<MonthViewHandle, MonthProps>(function MonthView(
@@ -453,6 +508,7 @@ export const MonthView = forwardRef<MonthViewHandle, MonthProps>(function MonthV
     canGoNext = true,
     onSelect,
     onFocusMonth,
+    onResetToToday,
   },
   ref,
 ) {
@@ -475,8 +531,47 @@ export const MonthView = forwardRef<MonthViewHandle, MonthProps>(function MonthV
     () => ({
       goPrev: () => carousel.goToPage(carousel.index - 1),
       goNext: () => carousel.goToPage(carousel.index + 1),
+      goToToday: (onDone) => {
+        const todayAnchor = monthAnchor(toIsoDate(new Date()));
+        const delta = monthDelta(focusKey, todayAnchor);
+        if (delta === 0) {
+          onDone?.();
+          return;
+        }
+        if (Math.abs(delta) === 1) {
+          const targetIdx = carousel.index + delta;
+          const targetKey = monthPages[targetIdx];
+          if (!targetKey) {
+            onResetToToday();
+            onDone?.();
+            return;
+          }
+          carousel.flyToIndex(targetIdx, {
+            onComplete: () => {
+              onFocusMonth(targetKey);
+              onDone?.();
+            },
+          });
+          return;
+        }
+        carousel.flyByPages(delta, {
+          onComplete: () => {
+            onResetToToday();
+            onDone?.();
+          },
+        });
+      },
     }),
-    [carousel.goToPage, carousel.index],
+    [
+      carousel.flyByPages,
+      carousel.flyToIndex,
+      carousel.goToPage,
+      carousel.index,
+      focusKey,
+      monthPages,
+      onFocusMonth,
+      onResetToToday,
+    ],
   );
 
   return (

@@ -3,7 +3,7 @@ import { Header } from './components/Header';
 import { Legend } from './components/Legend';
 import { RangeBar } from './components/RangeBar';
 import { LayoutSwitcher } from './components/LayoutSwitcher';
-import { MonthView, WeekView, type MonthViewHandle } from './components/CalendarViews';
+import { MonthView, WeekView, type MonthViewHandle, type WeekViewHandle } from './components/CalendarViews';
 import { DayDrawer } from './components/DayDrawer';
 import { SettingsPage } from './components/SettingsPage';
 import { Button } from './components/ui/Button';
@@ -32,7 +32,9 @@ export function App() {
   const { weekStart, weekWindowWeeks, showLegend, showFutureDays, weekSwipeEnabled } = settings;
 
   const [view, setView] = useState<AppView>('calendar');
+  const [todayAnimating, setTodayAnimating] = useState(false);
   const monthViewRef = useRef<MonthViewHandle>(null);
+  const weekViewRef = useRef<WeekViewHandle>(null);
 
   // 1. Session state hook
   const {
@@ -133,6 +135,29 @@ export function App() {
     resetToTodayView(next);
   };
 
+  const goToday = useCallback(() => {
+    resetToTodayView(layout);
+  }, [layout, resetToTodayView]);
+
+  const handleGoToday = useCallback(() => {
+    if (todayAnimating) return;
+    setTodayAnimating(true);
+    const onDone = () => setTodayAnimating(false);
+    if (layout === 'week') {
+      if (weekViewRef.current) weekViewRef.current.goToToday(onDone);
+      else {
+        goToday();
+        onDone();
+      }
+      return;
+    }
+    if (monthViewRef.current) monthViewRef.current.goToToday(onDone);
+    else {
+      goToday();
+      onDone();
+    }
+  }, [goToday, layout, todayAnimating]);
+
   if (!authChecked) {
     return (
       <div className="app-shell">
@@ -219,7 +244,8 @@ export function App() {
               to={to}
               loading={weekFetching}
               onApply={applyWeekRange}
-              onGoToday={() => resetToTodayView('week')}
+              onGoToday={handleGoToday}
+              todayAnimating={todayAnimating}
               weekFocus={weekFocusAnchor}
               weekStart={weekStart}
               weekWindowWeeks={weekWindowWeeks}
@@ -234,7 +260,8 @@ export function App() {
               loading={monthFetching}
               navLoading={monthBlockingLoad}
               onApply={applyMonthRange}
-              onGoToday={() => resetToTodayView('month')}
+              onGoToday={handleGoToday}
+              todayAnimating={todayAnimating}
               onPrevMonth={() => monthViewRef.current?.goPrev()}
               onNextMonth={() => {
                 if (!canGoNextMonth(from)) return;
@@ -267,9 +294,11 @@ export function App() {
               const d = new Date(`${anchorIso}T00:00:00`);
               syncMonthData(monthRange(d.getFullYear(), d.getMonth()));
             }}
+            onResetToToday={goToday}
           />
         ) : (
           <WeekView
+            ref={weekViewRef}
             focusSunday={weekFocusAnchor}
             rangeFrom={layout === 'week' ? from : data?.from ?? from}
             rangeTo={layout === 'week' ? to : data?.to ?? to}
@@ -282,6 +311,7 @@ export function App() {
             weekSwipeEnabled={weekSwipeEnabled}
             onSelect={openDay}
             onFocusWeek={focusWeek}
+            onResetToToday={goToday}
           />
         )}
 

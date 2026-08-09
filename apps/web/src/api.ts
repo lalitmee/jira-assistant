@@ -130,6 +130,13 @@ export function monthWindowPages(focusAnchorIso: string): string[] {
   ];
 }
 
+/** Signed month count from `fromAnchorIso` to `toAnchorIso`. */
+export function monthDelta(fromAnchorIso: string, toAnchorIso: string): number {
+  const from = new Date(`${monthAnchor(fromAnchorIso)}T00:00:00`);
+  const to = new Date(`${monthAnchor(toAnchorIso)}T00:00:00`);
+  return (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
+}
+
 /** Current calendar month, capped at today. */
 export function currentMonthRange(): { from: string; to: string } {
   const today = new Date();

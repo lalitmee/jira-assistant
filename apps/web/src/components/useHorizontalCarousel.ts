@@ -18,6 +18,23 @@ const FLING_VELOCITY_PX_MS = 0.5;
 const DRAG_DEADZONE_PX = 8;
 /** Page slide duration when committing via buttons or swipe release. */
 export const PAGE_TRANSITION_MS = 320;
+/** Extra duration per page for long "fly to today" slides, capped at `MAX_FLY_MS`. */
+export const FLY_MS_PER_PAGE = 60;
+export const MAX_FLY_MS = 800;
+
+export function flyDurationMs(pageDistance: number): number {
+  const distance = Math.max(1, Math.abs(pageDistance));
+  return Math.min(PAGE_TRANSITION_MS + (distance - 1) * FLY_MS_PER_PAGE, MAX_FLY_MS);
+}
+
+function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+export type FlyOptions = {
+  onComplete?: () => void;
+};
 
 export function focusIndex(pageKeys: string[], focusKey: string): number {
   const idx = pageKeys.indexOf(focusKey);
@@ -70,12 +87,14 @@ export function useHorizontalCarousel({
   const suppressClickRef = useRef(false);
   const internalNavRef = useRef(false);
   const pendingFocusRef = useRef<string | null>(null);
+  const pendingFlyRef = useRef<(() => void) | null>(null);
 
   const [ready, setReady] = useState(false);
   const [index, setIndex] = useState(() => focusIndex(pageKeys, focusKey));
   const [pageWidth, setPageWidth] = useState(0);
   const [dragOffset, setDragOffset] = useState(0);
   const [animating, setAnimating] = useState(false);
+  const [transitionMs, setTransitionMs] = useState(PAGE_TRANSITION_MS);
   const [prevFocusKey, setPrevFocusKey] = useState(focusKey);
   const [prevPageKeysKey, setPrevPageKeysKey] = useState(() => pageKeys.join('|'));
 
@@ -139,7 +158,7 @@ export function useHorizontalCarousel({
 
   const goToPage = useCallback(
     (nextIndex: number) => {
-      if (dragRef.current?.dragging) return;
+      if (dragRef.current?.dragging || animating) return;
       if (nextIndex < 0) {
         onFocusEarlier?.();
         return;
@@ -147,7 +166,52 @@ export function useHorizontalCarousel({
       if (nextIndex > maxIndex) return;
       commitPage(nextIndex);
     },
-    [commitPage, maxIndex, onFocusEarlier],
+    [animating, commitPage, maxIndex, onFocusEarlier],
+  );
+
+  const flyToIndex = useCallback(
+    (targetIndex: number, options?: FlyOptions) => {
+      if (dragRef.current?.dragging || animating) return;
+      const clamped = clampIndex(targetIndex, pageKeys.length);
+      if (clamped === indexRef.current) {
+        options?.onComplete?.();
+        return;
+      }
+      if (prefersReducedMotion()) {
+        internalNavRef.current = true;
+        setIndex(clamped);
+        setDragOffset(0);
+        internalNavRef.current = false;
+        options?.onComplete?.();
+        return;
+      }
+      internalNavRef.current = true;
+      pendingFlyRef.current = options?.onComplete ?? null;
+      setTransitionMs(flyDurationMs(clamped - indexRef.current));
+      setIndex(clamped);
+      setDragOffset(0);
+      setAnimating(true);
+    },
+    [animating, pageKeys.length],
+  );
+
+  const flyByPages = useCallback(
+    (pageDelta: number, options?: FlyOptions) => {
+      if (dragRef.current?.dragging || animating || pageDelta === 0 || pageWidth === 0) {
+        options?.onComplete?.();
+        return;
+      }
+      if (prefersReducedMotion()) {
+        options?.onComplete?.();
+        return;
+      }
+      internalNavRef.current = true;
+      pendingFlyRef.current = options?.onComplete ?? null;
+      setTransitionMs(flyDurationMs(pageDelta));
+      setAnimating(true);
+      setDragOffset(-pageDelta * pageWidth);
+    },
+    [animating, pageWidth],
   );
 
   useLayoutEffect(() => {
@@ -298,11 +362,19 @@ export function useHorizontalCarousel({
   const trackStyle: CSSProperties = {
     transform: `translate3d(${-index * pageWidth + dragOffset}px, 0, 0)`,
     width: pageWidth > 0 ? pageWidth * pageKeys.length : undefined,
-    ['--week-page-transition-ms' as string]: `${PAGE_TRANSITION_MS}ms`,
+    ['--week-page-transition-ms' as string]: `${transitionMs}ms`,
   };
 
   const onTrackTransitionEnd = (e: TransitionEvent<HTMLDivElement>) => {
     if (e.propertyName !== 'transform') return;
+
+    const pendingFly = pendingFlyRef.current;
+    if (pendingFly) {
+      pendingFlyRef.current = null;
+      setDragOffset(0);
+      setTransitionMs(PAGE_TRANSITION_MS);
+      pendingFly();
+    }
 
     const pendingFocus = pendingFocusRef.current;
     if (pendingFocus) {
@@ -333,5 +405,7 @@ export function useHorizontalCarousel({
     onClickCapture,
     onKeyDown,
     goToPage,
+    flyToIndex,
+    flyByPages,
   };
 }
