@@ -1910,7 +1910,6 @@ a:hover {
   background: transparent;
 }
 
-[data-calendar-grid='true'] .month-view,
 [data-calendar-grid='true'] .week-carousel-column {
   border: 1px solid var(--border);
   border-radius: var(--radius);
