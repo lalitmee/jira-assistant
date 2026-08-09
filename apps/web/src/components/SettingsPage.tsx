@@ -271,7 +271,7 @@ export function SettingsPage() {
       </SettingsSection>
 
       <SettingsSection title="Appearance">
-        <SettingsRow label="Theme" description="Also available from the account menu.">
+        <SettingsRow label="Theme">
           <ThemePreferenceControl />
         </SettingsRow>
         <SettingsRow

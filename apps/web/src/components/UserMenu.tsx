@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Me } from '../api';
+import { LogOut, Settings } from './ui/icons';
 import { Divider } from './ui/Divider';
 
 type Props = {
@@ -97,6 +98,9 @@ export function UserMenu({ me, onLogout, onOpenSettings }: Props) {
                 onOpenSettings();
               }}
             >
+              <span className="user-menu-item-icon" aria-hidden>
+                <Settings />
+              </span>
               Settings
             </button>
           ) : null}
@@ -109,6 +113,9 @@ export function UserMenu({ me, onLogout, onOpenSettings }: Props) {
               onLogout();
             }}
           >
+            <span className="user-menu-item-icon" aria-hidden>
+              <LogOut />
+            </span>
             Sign out
           </button>
         </div>
