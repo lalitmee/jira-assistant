@@ -1,27 +1,17 @@
-# Antigravity Superpowers Documentation Index
+# Design and Planning Docs
 
-This directory contains specifications, designs, and refactoring plans created during development sessions.
+This directory contains project specifications, design notes, and implementation plans.
 
----
+## Plans
 
-## Document Types & Use Cases
+- [Worklog calendar auditor](plans/2026-08-06-worklog-calendar-auditor.md)
 
-We utilize two types of documentation files to coordinate and track design choices:
+## Specifications
 
-### 1. Workspace Documents (Repository Files)
-* **Path:** Located inside the `docs/superpowers/` directory of the project (e.g., `docs/superpowers/specs/` or `docs/superpowers/plans/`).
-* **Use Case:** Persistent records meant to be checked into Git. These are reviewed by human developers during pull requests, shared with team members, and referenced in the future for codebase history.
-* **Current Example:** [2026-08-09-app-refactoring-design.md](file:///Users/lalit.kumar1/Projects/Work/Github/jira-assistant/docs/superpowers/specs/2026-08-09-app-refactoring-design.md)
-
-### 2. Conversation Artifacts (UI Files)
-* **Path:** Located inside the local session directory (e.g., `~/.gemini/antigravity-cli/brain/<conversation-id>/`).
-* **Use Case:** Interactive visual documents used by the Antigravity developer UI during active chat sessions. These render as side panels, allowing you to review code changes easily in the interface and proceed with automatic implementations.
-* **Current Example:** [Refactoring Plan Artifact](file:///Users/lalit.kumar1/.gemini/antigravity-cli/brain/6ac2ae3b-a9ac-42d5-8b52-de7b69278c48/refactoring_plan.md)
-
----
-
-## Specification Index
-
-| Date | Topic | Type | Repository Path | Brain Artifact Path | Status |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| 2026-08-09 | App.tsx Refactoring | Spec/Design | [2026-08-09-app-refactoring-design.md](file:///Users/lalit.kumar1/Projects/Work/Github/jira-assistant/docs/superpowers/specs/2026-08-09-app-refactoring-design.md) | [refactoring_plan.md](file:///Users/lalit.kumar1/.gemini/antigravity-cli/brain/6ac2ae3b-a9ac-42d5-8b52-de7b69278c48/refactoring_plan.md) | **Approved** |
+- [Docker single-port setup](specs/2026-08-06-docker-single-port-design.md)
+- [Week navigation controls](specs/2026-08-06-week-nav-hanging-controls-design.md)
+- [Worklog calendar auditor](specs/2026-08-06-worklog-calendar-auditor-design.md)
+- [Date navigation](specs/2026-08-07-date-navigation-design.md)
+- [Settings page](specs/2026-08-07-settings-page-design.md)
+- [App refactoring](specs/2026-08-09-app-refactoring-design.md)
+- [Settings expansion](specs/2026-08-09-settings-expansion-design.md)

@@ -28,7 +28,7 @@ We will decouple `App.tsx` by extracting the logic into three custom hooks:
 
 Below is the complete set of proposed files for this refactoring.
 
-### Hook 1: [useAuth.ts](file:///Users/lalit.kumar1/Projects/Work/Github/jira-assistant/apps/web/src/hooks/useAuth.ts)
+### Hook 1: [useAuth.ts](../../../apps/web/src/hooks/useAuth.ts)
 
 ```typescript
 import { useState, useEffect, useCallback } from 'react';
@@ -88,7 +88,7 @@ export function useAuth() {
 
 ---
 
-### Hook 2: [useCalendarNavigation.ts](file:///Users/lalit.kumar1/Projects/Work/Github/jira-assistant/apps/web/src/hooks/useCalendarNavigation.ts)
+### Hook 2: [useCalendarNavigation.ts](../../../apps/web/src/hooks/useCalendarNavigation.ts)
 
 ```typescript
 import { useState, useCallback } from 'react';
@@ -150,7 +150,7 @@ export function useCalendarNavigation(weekStart: WeekStart, weekWindowWeeks: Wee
 
 ---
 
-### Hook 3: [useWorklogs.ts](file:///Users/lalit.kumar1/Projects/Work/Github/jira-assistant/apps/web/src/hooks/useWorklogs.ts)
+### Hook 3: [useWorklogs.ts](../../../apps/web/src/hooks/useWorklogs.ts)
 
 ```typescript
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
@@ -479,7 +479,7 @@ export function useWorklogs({
 
 ---
 
-### Refactored Component: [App.tsx](file:///Users/lalit.kumar1/Projects/Work/Github/jira-assistant/apps/web/src/App.tsx)
+### Refactored Component: [App.tsx](../../../apps/web/src/App.tsx)
 
 ```typescript
 import { useCallback, useRef, useState } from 'react';
