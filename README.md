@@ -21,21 +21,21 @@ Jira Assistant is a personal, local-first app for working with Jira Cloud. Its f
 ### Month calendar
 
 <p align="center">
-  <img src="./light-theme-calendar.png" alt="Worklog Auditor month calendar in light theme" width="49%" />
-  <img src="./dark-theme-calendar.png" alt="Worklog Auditor month calendar in dark theme" width="49%" />
+  <img src="./docs/screenshots/light-theme-calendar.png" alt="Worklog Auditor month calendar in light theme" width="49%" />
+  <img src="./docs/screenshots/dark-theme-calendar.png" alt="Worklog Auditor month calendar in dark theme" width="49%" />
 </p>
 
 ### Week calendar
 
 <p align="center">
-  <img src="./light-theme-week.png" alt="Worklog Auditor week calendar in light theme" width="49%" />
-  <img src="./dark-theme-week.png" alt="Worklog Auditor week calendar in dark theme" width="49%" />
+  <img src="./docs/screenshots/light-theme-week.png" alt="Worklog Auditor week calendar in light theme" width="49%" />
+  <img src="./docs/screenshots/dark-theme-week.png" alt="Worklog Auditor week calendar in dark theme" width="49%" />
 </p>
 
 ### Settings
 
 <p align="center">
-  <img src="./settings.png" alt="Worklog Auditor settings page" width="80%" />
+  <img src="./docs/screenshots/settings.png" alt="Worklog Auditor settings page" width="80%" />
 </p>
 
 </details>
