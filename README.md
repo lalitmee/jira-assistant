@@ -1,6 +1,44 @@
-# Worklog Auditor
+# Jira Assistant
 
-Personal localhost app to audit your Jira Cloud worklogs on a calendar.
+Jira Assistant is a personal, local-first app for working with Jira Cloud. Its first available feature is **Worklog Auditor**, a calendar for reviewing your logged time. The feature roadmap below distinguishes what is available today from what is planned.
+
+## Features
+
+| Feature                | Description                                                                                                                                | Status    | Tracking issue                                            |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------- | --------------------------------------------------------- |
+| Worklog Auditor        | Review Jira worklogs in month and week calendar views, choose a date range, audit daily totals, and inspect worklog details and estimates. | Available | —                                                         |
+| CSV Export             | Export worklogs from the selected calendar date range to CSV.                                                                              | Planned   | [#1](https://github.com/lalitmee/jira-assistant/issues/1) |
+| My Issues Dashboard    | View assigned Jira issues with status, priority, due date, and links to Jira.                                                              | Planned   | [#2](https://github.com/lalitmee/jira-assistant/issues/2) |
+| Sprint Worklog Summary | Summarize your logged time by sprint and issue, with estimates where available.                                                            | Planned   | [#3](https://github.com/lalitmee/jira-assistant/issues/3) |
+
+`Available` means implemented. `Planned` means selected for future implementation; use the linked issue to track progress.
+
+## Screenshots
+
+<details>
+<summary>View Worklog Auditor screenshots</summary>
+
+### Month calendar
+
+<p align="center">
+  <img src="./light-theme-calendar.png" alt="Worklog Auditor month calendar in light theme" width="49%" />
+  <img src="./dark-theme-calendar.png" alt="Worklog Auditor month calendar in dark theme" width="49%" />
+</p>
+
+### Week calendar
+
+<p align="center">
+  <img src="./light-theme-week.png" alt="Worklog Auditor week calendar in light theme" width="49%" />
+  <img src="./dark-theme-week.png" alt="Worklog Auditor week calendar in dark theme" width="49%" />
+</p>
+
+### Settings
+
+<p align="center">
+  <img src="./settings.png" alt="Worklog Auditor settings page" width="80%" />
+</p>
+
+</details>
 
 ## Setup
 
