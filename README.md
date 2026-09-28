@@ -4,14 +4,14 @@ Jira Assistant is a personal, local-first app for working with Jira Cloud. Its f
 
 ## Features
 
-| Feature                | Description                                                                                                                                | Status    | Tracking issue                                            |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------- | --------------------------------------------------------- |
-| Worklog Auditor        | Review Jira worklogs in month and week calendar views, choose a date range, audit daily totals, and inspect worklog details and estimates. | Available | —                                                         |
-| CSV Export             | Export worklogs from the selected calendar date range to CSV.                                                                              | Planned   | [#1](https://github.com/lalitmee/jira-assistant/issues/1) |
-| My Issues Dashboard    | View assigned Jira issues with status, priority, due date, and links to Jira.                                                              | Planned   | [#2](https://github.com/lalitmee/jira-assistant/issues/2) |
-| Sprint Worklog Summary | Summarize your logged time by sprint and issue, with estimates where available.                                                            | Planned   | [#3](https://github.com/lalitmee/jira-assistant/issues/3) |
+| Feature                                                                       | Description                                                                                                                                | Status |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------ |
+| Worklog Auditor                                                               | Review Jira worklogs in month and week calendar views, choose a date range, audit daily totals, and inspect worklog details and estimates. | ✅     |
+| [CSV Export](https://github.com/lalitmee/jira-assistant/issues/1)             | Export worklogs from the selected calendar date range to CSV.                                                                              | ⏳     |
+| [My Issues Dashboard](https://github.com/lalitmee/jira-assistant/issues/2)    | View assigned Jira issues with status, priority, due date, and links to Jira.                                                              | ⏳     |
+| [Sprint Worklog Summary](https://github.com/lalitmee/jira-assistant/issues/3) | Summarize your logged time by sprint and issue, with estimates where available.                                                            | ⏳     |
 
-`Available` means implemented. `Planned` means selected for future implementation; use the linked issue to track progress.
+✅ Available · ⏳ Planned. Select a planned feature to open its tracking issue.
 
 ## Screenshots
 
@@ -20,23 +20,19 @@ Jira Assistant is a personal, local-first app for working with Jira Cloud. Its f
 
 ### Month calendar
 
-<p align="center">
-  <img src="./docs/screenshots/light-theme-calendar.png" alt="Worklog Auditor month calendar in light theme" width="49%" />
-  <img src="./docs/screenshots/dark-theme-calendar.png" alt="Worklog Auditor month calendar in dark theme" width="49%" />
-</p>
+| Light theme                                                                                 | Dark theme                                                                                |
+| ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| ![Worklog Auditor month calendar in light theme](docs/screenshots/light-theme-calendar.png) | ![Worklog Auditor month calendar in dark theme](docs/screenshots/dark-theme-calendar.png) |
 
 ### Week calendar
 
-<p align="center">
-  <img src="./docs/screenshots/light-theme-week.png" alt="Worklog Auditor week calendar in light theme" width="49%" />
-  <img src="./docs/screenshots/dark-theme-week.png" alt="Worklog Auditor week calendar in dark theme" width="49%" />
-</p>
+| Light theme                                                                            | Dark theme                                                                           |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| ![Worklog Auditor week calendar in light theme](docs/screenshots/light-theme-week.png) | ![Worklog Auditor week calendar in dark theme](docs/screenshots/dark-theme-week.png) |
 
 ### Settings
 
-<p align="center">
-  <img src="./docs/screenshots/settings.png" alt="Worklog Auditor settings page" width="80%" />
-</p>
+![Worklog Auditor settings page](docs/screenshots/settings.png)
 
 </details>
 
