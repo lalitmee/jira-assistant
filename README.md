@@ -1,6 +1,6 @@
 # Jira Assistant
 
-Jira Assistant is a personal, local-first app for working with Jira Cloud. Its first available feature is **Worklog Auditor**, a calendar for reviewing your logged time. The feature roadmap below distinguishes what is available today from what is planned.
+Jira Assistant is a personal, local-first app for working with Jira Cloud. Its first available feature is **Worklog Auditor**, a calendar for reviewing your logged time. The feature roadmap below distinguishes what is available today from what is planned. It is available under the [MIT License](LICENSE).
 
 ## Features
 
@@ -51,6 +51,8 @@ Jira Assistant is a personal, local-first app for working with Jira Cloud. Its f
 5. Copy Client ID + Secret from Settings.
 6. Copy `.env.example` to `.env` and fill in your Atlassian OAuth values.
 
+The callback in the Atlassian console must match `ATLASSIAN_REDIRECT_URI` exactly. If you change `API_PORT`, update that URI in both places. For direct production runs, also set `WEB_ORIGIN` to `http://localhost:<your-port>`; for Docker, update the published port and callback in `docker-compose.yml`.
+
 ## Run
 
 ```bash
@@ -59,7 +61,7 @@ yarn dev
 ```
 
 - Web: http://localhost:5173
-- API: http://localhost:8888
+- API: http://localhost:8888 (listens on this computer only)
 
 Open the web URL → **Connect to Jira** → pick a date range → review day totals and worklog details.
 
@@ -82,6 +84,7 @@ yarn start:prod
 
 - App: http://localhost:8888
 - Sessions persist in `./.data`
+- The API listens on `127.0.0.1` by default, so other devices cannot connect directly.
 - Re-run `yarn prod` after code changes (builds automatically)
 
 Run in the background:
@@ -103,6 +106,7 @@ docker compose up -d --build
 - App: http://localhost:8888
 - OAuth callback stays `http://localhost:8888/auth/callback` (same as `.env.example`)
 - Sessions persist in `./.data` on your machine (mounted into the container)
+- Docker publishes port 8888 on the host's `127.0.0.1` only. The API listens on all interfaces **inside the container** so Docker can forward that local connection.
 
 Useful commands:
 

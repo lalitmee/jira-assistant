@@ -17,6 +17,7 @@ export const env = {
   atlassianClientSecret: required('ATLASSIAN_CLIENT_SECRET'),
   atlassianRedirectUri: required('ATLASSIAN_REDIRECT_URI'),
   apiPort: Number(process.env.API_PORT ?? '8888'),
+  apiHost: process.env.API_HOST?.trim() || '127.0.0.1',
   webOrigin: process.env.WEB_ORIGIN?.trim() || 'http://localhost:5173',
 };
 

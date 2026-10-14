@@ -2,12 +2,13 @@ services:
   app:
     build: .
     ports:
-      - '8888:8888'
+      - '127.0.0.1:8888:8888'
     env_file:
       - .env
     environment:
       NODE_ENV: production
       API_PORT: '8888'
+      API_HOST: 0.0.0.0
       WEB_ORIGIN: http://localhost:8888
       ATLASSIAN_REDIRECT_URI: http://localhost:8888/auth/callback
       DATA_DIR: /app/.data

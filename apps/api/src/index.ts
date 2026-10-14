@@ -165,6 +165,6 @@ if (webDist) {
   app.get('*', serveStatic({ path: path.join(staticRoot, 'index.html') }));
 }
 
-serve({ fetch: app.fetch, port: env.apiPort }, () => {
-  console.log(`API listening on http://localhost:${env.apiPort}`);
+serve({ fetch: app.fetch, port: env.apiPort, hostname: env.apiHost }, () => {
+  console.log(`API listening on http://${env.apiHost}:${env.apiPort}`);
 });
